@@ -1,0 +1,113 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#111412">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data:; connect-src 'self' ws: wss:">
+  <title>BLACKSITE SHIFT — Co-op roguelite shooter</title>
+  <link rel="stylesheet" href="/style.css">
+  <link rel="stylesheet" href="/settings.css">
+</head>
+<body>
+  <canvas id="game" aria-label="First person game view"></canvas>
+  <div id="grain"></div>
+  <div id="hurt-flash"></div>
+  <div id="hud" class="hidden">
+    <header class="hud-top">
+      <div class="brand-mini"><span class="brand-mark">◈</span> B/S <span class="brand-divider">/</span> <span class="muted">BLACKSITE SHIFT</span></div>
+      <div class="wave-block"><span class="eyebrow" id="stage-label">THE FOUNDRY</span><strong id="wave-label">WAVE 01</strong><span id="threat-label">HOSTILES 00</span><span id="pressure-hud" class="pressure-hud hidden">PRESSURE 0/2</span><span id="salvage-hud" class="salvage-hud hidden">SALVAGE 0/7</span><span id="contract-hud" class="contract-hud hidden">WORK ORDER · PENDING</span><span id="overtime-hud" class="overtime-hud hidden">⚡ OVERTIME ACTIVE</span></div>
+      <div class="room-block"><span class="eyebrow">SQUAD CHANNEL</span><button id="copy-code" title="Copy room code">CODE <strong id="room-code">------</strong> <span>⧉</span></button><span class="ping-help">G PING · SHIFT+G DANGER</span><button id="manual-hud" class="settings-hud" title="Field manual">▤ FIELD MANUAL · H</button><button id="settings-hud" class="settings-hud" title="Settings">⚙ SETTINGS</button></div>
+    </header>
+    <div id="boss-bar" class="boss-bar hidden"><span id="boss-name">THE WARDEN</span><div class="boss-track"><div id="boss-fill"></div></div><small id="boss-value">100%</small></div>
+    <div id="feed" class="feed"></div>
+    <div class="hud-bottom">
+      <div class="health-block"><span class="eyebrow">OPERATIVE VITALS</span><div class="health-numbers"><strong id="health-number">100</strong><span id="health-max">/ 100</span></div><div class="health-track"><div id="health-fill"></div></div><span id="dash-label" class="subreadout">DASH READY <span>◆</span></span><span id="skill-label" class="subreadout skill-readout">E BULWARK READY</span><span id="graft-hud" class="subreadout graft-readout hidden"></span></div>
+      <div class="center-hint" id="center-hint">CLICK TO LOCK CURSOR</div>
+      <div class="weapon-block"><span class="eyebrow" id="class-name">VANGUARD</span><strong id="weapon-name">M-24 CARBINE</strong><div class="ammo-line"><span id="ammo-number">24</span><small id="reserve-number">/ ∞</small></div><span id="secondary-weapon" class="subreadout">1 PRIMARY · 2 EMPTY</span><span id="reload-label" class="subreadout">R RELOAD · UNLIMITED RESERVE</span></div>
+    </div>
+    <div class="right-stack"><div id="squad" class="squad"></div><div class="combat-tracker" aria-label="Run tracker"><div class="tracker-heading">RUN TELEMETRY <span>● LIVE</span></div><div class="tracker-grid"><div><small>DAMAGE</small><strong id="track-damage">0</strong></div><div><small>KILLS</small><strong id="track-kills">0</strong></div><div><small>5S DPS</small><strong id="track-dps">0</strong></div><div><small>ACCURACY</small><strong id="track-accuracy">0%</strong></div></div></div></div>
+    <div id="crosshair"><i></i><i></i><i></i><i></i><b></b></div>
+    <div id="danger-cue" class="danger-cue hidden">SNIPER LOCK</div>
+    <div id="machine-hint" class="machine-hint hidden"><span id="machine-hint-text">F · CONNECT MACHINE</span><div class="machine-progress"><i id="machine-progress-fill"></i></div></div>
+    <div id="machine-console" class="machine-console hidden" aria-live="polite"><div class="machine-console-top"><span>CONTRACTOR CONTROL // LIVE COMBAT</span><strong id="console-station">STATION 01</strong></div><h2 id="console-mode">VALVE CASCADE</h2><p id="console-rule">Select the lit valve and seal each stage.</p><div class="machine-console-progress"><span id="console-step">STAGE 1 / 3</span><span id="console-mistakes">FAULTS 0</span></div><div id="console-channels" class="machine-channels"></div><div id="console-sweep" class="console-sweep hidden"><i id="console-zone"></i><b id="console-needle"></b></div><div id="console-stability" class="console-stability hidden"><i id="console-stability-fill"></i></div><div id="console-status" class="console-status">ALIGN THE CONTROL</div><footer>A / D SELECT · SPACE CONFIRM · F CANCEL<br>THE ENCOUNTER CONTINUES WHILE YOU OPERATE</footer></div>
+    <div id="hitmarker" class="hitmarker">×</div>
+    <div id="toast" class="toast"></div>
+    <div id="wave-intro" class="wave-intro"><small id="intro-kicker">SECTOR 01</small><strong id="intro-title">THE FOUNDRY</strong><span id="intro-detail">MOLTEN PROCESSING</span></div>
+  </div>
+
+  <main id="menu" class="screen">
+    <div class="menu-rail"><span>RESTRICTED ACCESS // SECTOR 09</span><span>BUILD 0.22 / MACHINE CALIBRATION</span></div>
+    <div class="menu-content">
+      <div class="kicker"><span class="live-dot"></span> MULTIPLAYER ROGUELITE FPS</div>
+      <h1>BLACKSITE<br><em>SHIFT</em><span class="title-period">.</span></h1>
+      <p class="menu-copy">Your contractor sent a maintenance crew into a sealed processing complex. Its automated systems now classify employees as raw material. Recover equipment, operate the machinery, and adapt faster than the facility escalates.</p>
+      <div class="menu-form">
+        <label for="name-input">OPERATIVE CALLSIGN</label>
+        <input id="name-input" maxlength="16" value="OPERATIVE" autocomplete="off">
+        <div class="class-heading">SELECT CLASS <span>STARTING WEAPON · ACTIVE SKILL · TALENT TREE</span></div>
+        <div class="class-grid" aria-label="Choose class">
+          <button type="button" class="class-card" data-class="vanguard"><strong>VANGUARD</strong><span>CARBINE</span><small>BULWARK · DAMAGE GUARD</small></button>
+          <button type="button" class="class-card" data-class="breacher"><strong>BREACHER</strong><span>SCATTERGUN</span><small>SHOCKWAVE · CROWD CLEAR</small></button>
+          <button type="button" class="class-card" data-class="runner"><strong>RUNNER</strong><span>NEEDLER SMG</span><small>OVERCLOCK · SPEED BURST</small></button>
+          <button type="button" class="class-card" data-class="medic"><strong>MEDIC</strong><span>PULSE RIFLE</span><small>RALLY PULSE · TEAM HEAL</small></button>
+        </div>
+        <div id="class-detail-menu" class="class-detail" aria-live="polite"></div>
+        <div class="menu-actions"><button id="create-button" class="primary">CREATE SQUAD <span>↗</span></button><button id="solo-button" class="secondary">SOLO RUN</button></div>
+        <div class="join-row"><input id="join-input" maxlength="6" placeholder="ROOM CODE" autocomplete="off"><input id="host-input" placeholder="HOST IP:PORT (LAN)" autocomplete="off"><button id="join-button">JOIN SQUAD <span>→</span></button></div>
+        <button id="manual-menu" class="settings-menu">▤ FIELD MANUAL · WEAPONS / EFFECTS / THREATS</button><button id="settings-menu" class="settings-menu">⚙ SETTINGS & CONTROLS</button>
+        <div id="menu-error" role="alert"></div>
+      </div>
+    </div>
+    <div class="menu-aside"><div class="serial">B/S-09<br>/// 001</div><div class="vertical-line"></div><p>1–4 OPERATIVES<br>PROCEDURAL ESCALATION<br>NO EXTRACTION GUARANTEED</p></div>
+    <footer class="menu-footer"><span>WASD MOVE&nbsp; • &nbsp;MOUSE AIM&nbsp; • &nbsp;LMB FIRE&nbsp; • &nbsp;SHIFT SPRINT&nbsp; • &nbsp;SPACE JUMP&nbsp; • &nbsp;CTRL SLIDE&nbsp; • &nbsp;Q DASH&nbsp; • &nbsp;E SKILL&nbsp; • &nbsp;F MACHINE&nbsp; • &nbsp;G PING&nbsp; • &nbsp;V REVIVE&nbsp; • &nbsp;1/2 WEAPONS&nbsp; • &nbsp;H MANUAL</span><span>© BLACKSITE SYSTEMS</span></footer>
+  </main>
+
+  <section id="lobby" class="panel-overlay hidden" aria-label="Squad lobby">
+    <div class="panel lobby-panel"><div class="panel-top"><span>OPERATIVE TERMINAL</span><span class="signal">● SIGNAL ACTIVE</span></div>
+      <div class="panel-body"><div class="eyebrow">SQUAD ASSEMBLY</div><h2>THE SHIFT<br>STARTS NOW.</h2><p>Share this room code with up to three friends. On LAN, they also enter your computer's IP address and port 3000.</p><button id="lobby-code" class="big-code" title="Copy room code">------ <span>⧉ COPY</span></button><div id="lobby-players" class="lobby-players"></div><div class="class-heading">CHANGE CLASS <span>BEFORE THE RUN</span></div><div class="class-grid lobby-classes" aria-label="Change class"><button type="button" class="class-card" data-class="vanguard"><strong>VANGUARD</strong><span>BULWARK</span></button><button type="button" class="class-card" data-class="breacher"><strong>BREACHER</strong><span>SHOCKWAVE</span></button><button type="button" class="class-card" data-class="runner"><strong>RUNNER</strong><span>OVERCLOCK</span></button><button type="button" class="class-card" data-class="medic"><strong>MEDIC</strong><span>RALLY PULSE</span></button></div><div id="class-detail-lobby" class="class-detail" aria-live="polite"></div><label class="service-time" for="service-time">SERVICE DECISION WINDOW <select id="service-time"><option value="30">30 SECONDS</option><option value="60" selected>60 SECONDS</option><option value="120">120 SECONDS</option></select></label><label class="service-time" for="seed-input">RUN SEED <input id="seed-input" type="text" inputmode="numeric" maxlength="10" placeholder="RANDOM · LEAVE BLANK"></label><button id="start-button" class="primary wide">BEGIN SHIFT <span>↗</span></button><div class="lobby-note">The host can enter a previous run seed to replay its room and reward sequence. Threat pressure pauses while the crew chooses.</div></div>
+    </div>
+  </section>
+
+  <section id="upgrade" class="panel-overlay hidden" aria-label="Choose an augment">
+    <div class="upgrade-wrap"><div class="upgrade-heading"><span class="eyebrow" id="choice-stage">WAVE CLEARED // STATION ONLINE</span><h2>BUILD YOUR <em>LOADOUT</em></h2><p>Choose an augment, armory weapon, class talent, and boss graft when available. Automatic departure occurs at the visible countdown.</p><span id="upgrade-timer">60</span></div>
+      <div class="contract-ledger" aria-label="Contract account"><div><small>WORK ORDER / SETTLEMENT</small><strong id="ledger-order">AWAITING ASSIGNMENT</strong><span id="ledger-result">A VERIFIED ORDER PAYS ONE CREDIT</span></div><div><small>SECTOR CREDIT</small><strong id="ledger-credit">0 / 2</strong><span>TWO CREDITS PAY AN EXTRA BOSS DRAFT</span></div><div><small>CONTRACT STRAIN</small><strong id="ledger-strain">0 / 2</strong><span id="ledger-strain-effect">MISSED ORDERS ADD NEXT-WAVE REINFORCEMENTS</span></div></div>
+      <div class="overtime-terminal" aria-label="Overtime terminal">
+        <div class="overtime-copy"><small>CONTRACTOR AUTHORIZATION // SQUAD VOTE</small><strong id="overtime-name">OVERTIME PROTOCOL</strong><p id="overtime-hazard">Unstable power: faster reinforcements and more frequent floor hazards.</p><span id="overtime-reward">REWARD ON CLEAR: AN EXTRA AUGMENT DRAFT FOR EVERY SURVIVOR</span><small id="overtime-machine">NEXT MACHINE: HYDRAULIC SHEAR</small></div>
+        <div class="overtime-controls"><small id="overtime-tally">0 YES · 0 NO · 0 CREW</small><div><button id="vote-stable" type="button">STABLE ROUTE</button><button id="vote-overtime" type="button">ACTIVATE OVERTIME ⚡</button></div><small id="overtime-my-vote">MAJORITY REQUIRED · TIES STAY STABLE</small></div>
+      </div>
+      <div class="choice-tabs"><button id="tab-augment" data-tab="augment">01 AUGMENT</button><button id="tab-weapon" data-tab="weapon">02 ARMORY</button><button id="tab-talent" data-tab="talent">03 TALENT TREE</button><button id="tab-graft" data-tab="graft">04 BOSS GRAFT</button></div>
+      <div id="upgrade-cards" class="upgrade-cards"></div><button id="reroll-button" class="reroll-button hidden" type="button">↻ REROLL AUGMENT OFFERS · SALVAGE REQUISITION</button><div id="weapon-cards" class="upgrade-cards hidden"></div><div id="talent-cards" class="upgrade-cards hidden"></div><div id="graft-cards" class="upgrade-cards hidden"></div>
+      <button id="manual-upgrade" class="manual-inline" type="button">▤ REVIEW WEAPON / EFFECT INTELLIGENCE · H</button><div id="ready-strip" class="ready-strip" aria-label="Squad readiness"></div>
+      <div class="upgrade-footer"><span id="choice-status">CHOOSE ONE AUGMENT TO CONTINUE</span><span>◈</span> TEAMMATES SELECT INDEPENDENTLY</div></div>
+  </section>
+
+  <section id="gameover" class="panel-overlay hidden" aria-label="Run over">
+    <div class="panel gameover-panel"><div class="panel-top"><span>INCIDENT REPORT</span><span class="critical" id="result-signal">● SIGNAL LOST</span></div><div class="panel-body"><div class="eyebrow" id="result-kicker">RUN TERMINATED</div><h2 id="result-title">END OF<br><em>SHIFT.</em></h2><p id="gameover-stats">Your squad reached wave 01.</p><button id="retry-button" class="primary wide">RUN IT BACK <span>↗</span></button></div></div>
+  </section>
+  <section id="manual" class="panel-overlay hidden" aria-label="Field manual">
+    <div class="panel manual-panel"><div class="panel-top"><span>CONTRACTOR FIELD INTELLIGENCE // REV 0.22</span><button id="manual-close" type="button">✕ CLOSE</button></div>
+      <nav class="manual-nav" aria-label="Manual sections"><button type="button" data-manual="weapons">WEAPONS</button><button type="button" data-manual="effects">EFFECTS</button><button type="button" data-manual="classes">CLASSES</button><button type="button" data-manual="augments">AUGMENTS</button><button type="button" data-manual="enemies">THREATS</button></nav>
+      <div id="manual-content" class="manual-content"></div><div class="manual-foot">THE RUN CONTINUES WHILE THIS TERMINAL IS OPEN · H / ESC TO CLOSE</div></div>
+  </section>
+  <section id="settings" class="panel-overlay hidden" aria-label="Game settings">
+    <div class="panel settings-panel"><div class="panel-top"><span>OPERATIVE CONFIGURATION</span><button id="settings-close" aria-label="Close settings">✕ CLOSE</button></div>
+      <div class="panel-body"><div class="eyebrow">PREFERENCES</div><h2>SETTINGS<span class="title-period">.</span></h2>
+        <div class="setting-row"><label for="setting-sensitivity">MOUSE SENSITIVITY <output id="value-sensitivity">0.80</output></label><input id="setting-sensitivity" type="range" min="0.15" max="2" step="0.05" value="0.8"></div>
+        <div class="setting-row"><label for="setting-adsSensitivity">ADS SENSITIVITY <output id="value-adsSensitivity">65%</output></label><input id="setting-adsSensitivity" type="range" min="20" max="100" step="5" value="65"></div>
+        <div class="setting-row"><label for="setting-fov">VERTICAL FIELD OF VIEW <output id="value-fov">82°</output></label><input id="setting-fov" type="range" min="65" max="110" step="1" value="82"></div>
+        <div class="setting-row"><label for="setting-volume">MASTER VOLUME <output id="value-volume">70%</output></label><input id="setting-volume" type="range" min="0" max="100" step="5" value="70"></div>
+        <div class="setting-row"><label for="setting-quality">RENDER RESOLUTION <output id="value-quality">85%</output></label><input id="setting-quality" type="range" min="50" max="100" step="5" value="85"></div>
+        <div class="setting-row"><label for="setting-shake">CAMERA SHAKE <output id="value-shake">70%</output></label><input id="setting-shake" type="range" min="0" max="100" step="5" value="70"></div>
+        <div class="setting-row"><label for="setting-bob">VIEW BOB <output id="value-bob">70%</output></label><input id="setting-bob" type="range" min="0" max="100" step="5" value="70"></div>
+        <label class="toggle-row"><input id="setting-invert" type="checkbox"><span>INVERT VERTICAL LOOK</span></label>
+        <label class="toggle-row"><input id="setting-reducedFlashes" type="checkbox"><span>REDUCE FLASHING LIGHTS · KEEP THREAT WARNINGS VISIBLE</span></label>
+        <div class="controls-grid"><span>WASD</span><span>MOVE</span><span>SHIFT</span><span>SPRINT</span><span>SPACE</span><span>JUMP</span><span>CTRL</span><span>SLIDE</span><span>Q</span><span>DASH</span><span>E</span><span>CLASS SKILL</span><span>F</span><span>HOLD TO ARM MACHINE</span><span>G</span><span>ROUTE PING</span><span>SHIFT+G</span><span>DANGER PING</span><span>V</span><span>HOLD TO REVIVE</span><span>R</span><span>RELOAD</span><span>1 / 2</span><span>SWITCH WEAPON</span></div>
+        <p class="settings-note">Settings save automatically. The run continues while this panel is open.</p>
+      </div>
+    </div>
+  </section>
+  <script type="module" src="/game3d.js"></script>
+</body>
+</html>
+
