@@ -3,7 +3,7 @@ import { BUILD_VERSION, bayNames, classes, weapons, weaponNotes, enemyIntel, ene
 
 const $=id=>document.getElementById(id);
 const canvas=$('game');
-const defaults={sensitivity:.8,adsSensitivity:65,fov:82,volume:70,quality:85,shake:70,bob:70,allyProjectiles:65,invert:false,reducedFlashes:false};
+const defaults={sensitivity:.8,adsSensitivity:65,fov:82,volume:70,quality:85,shake:70,bob:70,allyProjectiles:65,invert:false,reducedFlashes:false,toggleSprint:false};
 let settings={...defaults};
 try{settings={...settings,...JSON.parse(localStorage.getItem('blacksite-settings')||'{}')};}catch{}
 document.documentElement.classList.toggle('reduce-flashes',!!settings.reducedFlashes);
@@ -14,7 +14,7 @@ let ws=null,state=null,map=null,myId=null,roomCode='',autoStart=false,lastPhase=
 let seenPingIds=new Set(),seenThreats=new Set();
 let reconnectToken='',reconnectUrl='',reconnectDeadline=0,reconnectAttempts=0,reconnectTimer=0,reconnecting=false;
 let position={x:12.5,y:12.5,a:-Math.PI/2,pitch:0,initialized:false};
-let keys={},mouseDown=false,mouseRight=false,fallbackAim=false,settingsOpen=false,manualOpen=false;
+let keys={},mouseDown=false,mouseRight=false,fallbackAim=false,settingsOpen=false,manualOpen=false,sprintLatched=false;
 let velocity={x:0,y:0},jumpHeight=0,jumpVelocity=0,grounded=true,eyeHeight=1.65;
 let dashUntil=0,lastDash=-100,slideUntil=0,lastSlide=-100,landingKick=0;
 let recoil=0,aimKick=0,muzzle=0,bob=0,shake=0,lastMove=0,lastFire=0,lastFrame=performance.now();
@@ -40,6 +40,12 @@ function telegraphGap(e,p){
 const escapeHTML=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const me=()=>state?.players?.find(p=>p.id===myId);
 const operating=()=>state?.phase==='combat'?state.machines?.find(m=>m.operatorId===myId)||null:null;
+const recovering=()=>state?.phase==='combat'&&state.docket?.holderId===myId;
+function docketInReach(){
+  const d=state?.docket;if(state?.phase!=='combat'||!d||d.state!=='available')return false;
+  const dx=d.x-position.x,dy=d.y-position.y,dist=Math.hypot(dx,dy);
+  return dist<=1.7&&dist>.05&&Math.cos(Math.atan2(dy,dx)-position.a)>=.55;
+}
 function send(data){if(ws?.readyState===WebSocket.OPEN)ws.send(JSON.stringify(data));}
 function toast(message){const e=$('toast');e.textContent=message;e.classList.add('show');clearTimeout(toastTimer);toastTimer=setTimeout(()=>e.classList.remove('show'),2000);}
 function sound(freq=120,duration=.12,volume=.05,type='sawtooth'){
@@ -144,10 +150,13 @@ function loadSettingsUI(){
   $('setting-invert').addEventListener('change',e=>{settings.invert=e.target.checked;localStorage.setItem('blacksite-settings',JSON.stringify(settings));});
   $('setting-reducedFlashes').checked=!!settings.reducedFlashes;
   $('setting-reducedFlashes').addEventListener('change',e=>{settings.reducedFlashes=e.target.checked;document.documentElement.classList.toggle('reduce-flashes',settings.reducedFlashes);localStorage.setItem('blacksite-settings',JSON.stringify(settings));});
+  $('setting-toggleSprint').checked=!!settings.toggleSprint;
+  $('setting-toggleSprint').addEventListener('change',e=>{settings.toggleSprint=e.target.checked;sprintLatched=false;localStorage.setItem('blacksite-settings',JSON.stringify(settings));});
 }
 loadSettingsUI();
 function openSettings(){
   if(operating())send({type:'machineInput',action:'abort'});
+  if(recovering())send({type:'docketHold',holding:false});
   settingsOpen=true;keys={};mouseDown=false;mouseRight=false;
   $('settings').classList.remove('hidden');
   if(document.pointerLockElement)document.exitPointerLock();
@@ -181,7 +190,8 @@ function manualSection(section='weapons'){
     html+='<h3>CONTRACT WORK ORDERS</h3>';
     html+=Object.values(workOrders).map(order=>manualCard(order.name,'OPTIONAL / ONE PER ENCOUNTER',order.detail)).join('');
     html+=manualCard('SECTOR ACCOUNT','2 CREDITS / BOSS CLEAR','A completed work order earns one sector credit and removes one contract strain. Two credits by the sector boss clear pay one extra personal augment draft to every survivor. A missed order adds one contract strain, capped at two. Each point authorizes one extra reinforcement in the next encounter; succeeding later removes one. Contract strain persists between sectors, while credit resets at each new sector.');
-    html+=manualCard('MACHINE CALIBRATION','F CONNECT / A-D SELECT / SPACE SEAL / F CANCEL','Bays can have three short Valve Cascade stations, two Circuit Bridge stations, or one difficult Pressure Balance station. The operator cannot shoot or move while connected, but combat continues. Valve Cascade routes three marked valves with a contactor recovery between seals. Circuit Bridge requires three channel selections timed to the moving amber window. Pressure Balance requires four targets held steady for 1.7 s each while the system drifts every 2.4 s. Damage interrupts the current hold; leaving reach or being downed cancels. Each station has its own 17 s cooldown and a 1.25 s marked warning before discharge.');
+    html+=manualCard('MACHINE CALIBRATION','F CONNECT / A-D SELECT / SPACE SEAL / F CANCEL','Bays can have three short Valve Cascade stations, two Circuit Bridge stations, or one difficult Pressure Balance station. The operator cannot shoot or move while connected, but combat continues. Valve Cascade routes three marked valves with a contactor recovery between seals. Circuit Bridge requires three channel selections timed to the moving amber window. Pressure Balance requires four targets held steady for 1.7 s each while the system drifts every 2.4 s. Damage interrupts the current hold; leaving reach or being downed cancels. A station normally recharges in 17 s; Feed Debt takes 21 s and Audit Sweep 23 s. Every strike has a 1.25 s marked warning.');
+    html+=manualCard('RECOVERY DOCKET','WAVES 2 / 5 / 8 · HOLD F FOR 2.5 S','One tagged record appears on a reachable side route during each sector’s second normal wave. Face it within 1.6 m and hold F while crew cover you. You cannot move, fire, dash, or use a skill during recovery; damage, release, turning away, disconnect, or a clear before completion cancels it. Securing the record reveals the next boss work order before the Overtime vote and grants every survivor one augment-offer reroll if the kill salvage quota was missed. Rerolls never stack above one. Unrecovered records carry no penalty and combat does not pause.');
   }else if(section==='classes'){
     html='<h2>CREW <em>ROLES.</em></h2><p class="manual-intro">Skills have longer cooldowns and shape when the crew pushes, holds or rescues. Class talents are earned in order within their branch.</p>';
     html+=Object.values(classes).map(c=>manualCard(c.name,`${c.skill} · ${c.cooldown} S COOLDOWN`,c.skillDetail)).join('');
@@ -200,6 +210,7 @@ function manualSection(section='weapons'){
 function openManual(section='weapons'){
   if(settingsOpen)closeSettings();
   if(operating())send({type:'machineInput',action:'abort'});
+  if(recovering())send({type:'docketHold',holding:false});
   manualOpen=true;keys={};mouseDown=false;mouseRight=false;
   manualSection(section);$('manual').classList.remove('hidden');
   if(document.pointerLockElement)document.exitPointerLock();
@@ -314,6 +325,9 @@ function connect(code='',startImmediately=false,resume=false){
       view.skillEffect(data.kind,data.x,data.y);
       if(['explosion','gravityBlast','weldBeam','wardenPress','coldPulse','bossPurge','bruteSlam','ramCrash','ramHit','tether','markBreak','combustion','shrapnel','kinetic','siphon','conduction','machineShear','machinePurge','machineArc','sapperBlast','bossShear','coolantLance','reactorPress','bossOverdrive','stagger'].includes(data.kind)){const distance=Math.hypot(position.x-data.x,position.y-data.y);sound(data.kind==='machinePurge'||data.kind==='coldPulse'||data.kind==='bossPurge'||data.kind==='coolantLance'||data.kind==='gravityBlast'?320:data.kind==='machineArc'||data.kind==='conduction'?520:data.kind==='kinetic'||data.kind==='tether'||data.kind==='ramCrash'||data.kind==='stagger'?115:74,.3,.075/(1+distance*.12));if(['sapperBlast','wardenPress','weldBeam','coldPulse','bossPurge','bruteSlam','ramCrash','ramHit','machineShear','machinePurge','machineArc','bossShear','coolantLance','reactorPress','bossOverdrive','stagger'].includes(data.kind))industrialSound('impact',1/(1+distance*.12));}
       if(data.kind==='salvage')sound(760,.24,.042,'triangle');
+      if(data.kind==='docketStart')sound(235,.2,.035,'square');
+      if(data.kind==='docketAbort')sound(125,.12,.022,'triangle');
+      if(data.kind==='docketSecured'){sound(660,.25,.04,'triangle');setTimeout(()=>sound(880,.28,.035,'triangle'),115);}
       if(data.kind==='machineArm'){sound(610,.45,.045,'square');industrialSound('warning',.75);}
       if(data.kind==='machineHandle'){sound(210,.16,.035,'square');industrialSound('impact',.22);}
       if(data.kind==='machineAbort')sound(130,.13,.018,'triangle');
@@ -377,6 +391,7 @@ $('vote-overtime').onclick=()=>{send({type:'overtime',vote:'overtime'});sound(61
 $('reroll-button').onclick=()=>{const p=me();if(p?.rerolls&&!p.augmentReady){send({type:'reroll',draftToken:p.draftToken});sound(430,.18,.04,'triangle');}};
 
 function reportAction(row){
+  if(row.dockets)return `${row.dockets} RECOVERY DOCKET${row.dockets===1?'':'S'} SECURED`;
   if(row.revives)return `${row.revives} RESTORE${row.revives===1?'':'S'}`;
   if(row.machineCycles)return `${row.machineCycles} MACHINE CYCLE${row.machineCycles===1?'':'S'}`;
   if(row.healing)return `${row.healing} HP RESTORED`;
@@ -394,7 +409,7 @@ function showEncounterReport(report,playerId){
   const mine=report.crew.find(row=>row.id===playerId)||report.crew[0];
   $('report-summary').textContent=`WAVE ${String(report.wave).padStart(2,'0')} · ${report.duration}S · ORDER ${report.workOrder.toUpperCase()}`;
   $('report-contribution').textContent=`${report.overtime?`${report.overtime} CLEARED · `:''}${report.salvage?'SALVAGE REROLL EARNED · ':''}${mine?reportAction(mine):'NO CREW RECORD'}`;
-  const entries=mine?[['DAMAGE',mine.damage],['KILLS',mine.kills],['SKILLS',mine.skillUses],['MACHINES',mine.machineCycles],['RESCUES',mine.revives],['HEALED',mine.healing],['GUARDED',mine.guardedDamage],['OVERCLOCK KILLS',mine.overclockKills],['STAGGERS',mine.staggered],['BANK HITS',mine.bankHits],['REACTIONS',mine.reactions],['PRECISION R',mine.precisionReloads]].filter(([,value],index)=>index<3||value>0):[];
+  const entries=mine?[['DAMAGE',mine.damage],['KILLS',mine.kills],['SKILLS',mine.skillUses],['MACHINES',mine.machineCycles],['DOCKETS',mine.dockets],['RESCUES',mine.revives],['HEALED',mine.healing],['GUARDED',mine.guardedDamage],['OVERCLOCK KILLS',mine.overclockKills],['STAGGERS',mine.staggered],['BANK HITS',mine.bankHits],['REACTIONS',mine.reactions],['PRECISION R',mine.precisionReloads]].filter(([,value],index)=>index<3||value>0):[];
   $('report-metrics').innerHTML=entries.map(([label,value])=>`<b>${label} ${Number(value).toLocaleString()}</b>`).join('');
   $('report-crew').innerHTML=report.crew.filter(row=>row.id!==playerId).map(row=>`<span>${escapeHTML(row.name)} · ${reportAction(row)}</span>`).join('')||'<span>SOLO CONTRACT · NO OTHER CREW</span>';
 }
@@ -418,6 +433,8 @@ function updateUI(){
   $('pressure-hud').textContent=pressureBand<2?`PRESSURE ${pressureBand}/2 · NEXT +1 IN ${Math.max(0,(pressureBand?60:30)-seconds)}S`:'PRESSURE 2/2 · REINFORCEMENTS MAXED';
   $('salvage-hud').classList.toggle('hidden',state.phase!=='combat');
   $('salvage-hud').textContent=state.salvage?.earned?'SALVAGE QUOTA MET · REROLL EARNED':`SALVAGE ${state.salvage?.count||0}/${state.salvage?.target||0}`;
+  $('docket-hud').classList.toggle('hidden',state.phase!=='combat'||!state.docket);
+  if(state.docket)$('docket-hud').textContent=state.docket.state==='secured'?`RECOVERY SECURED · ${state.docket.name}`:`RECOVERY ${state.docket.name} · ${Math.ceil(Math.hypot(state.docket.x-p.x,state.docket.y-p.y))}M · INTEL + REROLL BACKSTOP`;
   const order=state.workOrder,account=state.contract;
   $('contract-hud').classList.toggle('hidden',!order||state.phase==='lobby');
   $('contract-hud').classList.toggle('paid',order?.result==='paid');
@@ -474,8 +491,14 @@ function updateUI(){
   $('danger-cue').classList.toggle('hidden',!lock&&!hazard&&!machineDanger);
   if(lock||hazard||machineDanger)$('danger-cue').textContent=lock?(lock.telegraph.kind==='charge'?'RAM CHARGE · LEAVE THE LINE':lock.telegraph.kind==='slam'?'BRUTE SLAM · CLEAR THE RING':lock.telegraph.kind==='blast'?'SAPPER BLAST · CLEAR MARKED ZONE':lock.telegraph.kind==='press'?lock.type==='overseer'?'REACTOR PRESS · CLEAR THE MARK':'WARDEN PRESS · CLEAR THE MARK':lock.telegraph.kind==='beam'?lock.type==='warden'?'WARDEN SHEAR · LEAVE THE STRIP':lock.type==='matriarch'?'COOLANT LANCE · LEAVE THE STRIP':lock.boss?'OVERSEER CUT · LEAVE THE STRIP':'WELDER CUT · LEAVE THE STRIP':lock.telegraph.kind==='coldPulse'?lock.boss?'MATRIARCH PURGE · CLEAR THE RING':'COOLANT PULSE · CLEAR THE RING':lock.telegraph.kind==='snipe'?'SNIPER LOCK':'BOSS VOLLEY'):machineDanger?'MACHINE CYCLE · CLEAR CENTER':(hazard.active?'MOVE OUT OF HAZARD':state.overtime?.active?'OVERTIME HAZARD CHARGING':'FLOOR HAZARD CHARGING');
   const session=operating();
+  const nearbyDocket=state.phase==='combat'&&state.docket?.state==='available'&&!p.dead&&!p.downed&&docketInReach();
+  $('docket-hint').classList.toggle('hidden',!nearbyDocket);
+  if(nearbyDocket){
+    $('docket-hint-text').textContent=state.docket.holderId===myId?`SECURING ${state.docket.name} · CREW COVER REQUIRED`:state.docket.holderId?`CREWMATE SECURING ${state.docket.name}`:`HOLD F · 2.5S · NEXT ORDER INTEL + REROLL IF QUOTA MISSED`;
+    $('docket-progress-fill').style.width=`${Math.round(state.docket.progress*100)}%`;
+  }
   const nearbyMachine=state.phase==='combat'&&!p.dead&&!p.downed?(state.machines||[]).filter(m=>Math.hypot(p.x-m.x,p.y-m.y)<2.5).sort((a,b)=>Math.hypot(p.x-a.x,p.y-a.y)-Math.hypot(p.x-b.x,p.y-b.y))[0]:null;
-  $('machine-hint').classList.toggle('hidden',!nearbyMachine||!!session);
+  $('machine-hint').classList.toggle('hidden',!nearbyMachine||!!session||!!nearbyDocket);
   if(nearbyMachine&&!session){
     const m=nearbyMachine;
     $('machine-hint-text').textContent=m.state==='ready'?m.operatorId?`${m.modeName} · CREWMATE OPERATING`:`F · CONNECT ${m.modeName} · ${m.steps} STAGES`:m.state==='warning'?`STATION ${m.id+1} · CYCLE IN ${m.warningRemaining.toFixed(1)}S`:`STATION ${m.id+1} · RECHARGE ${Math.ceil(m.readyIn)}S`;
@@ -509,6 +532,8 @@ function updateUI(){
   }
   if(state.phase==='intermission'&&!p.dead){
     showEncounterReport(state.report,p.id);
+    $('docket-ledger').classList.toggle('hidden',!state.report?.docket);
+    if(state.report?.docket)$('docket-ledger').textContent=state.report.docket.secured?`RECOVERY DOCKET // ${state.report.docket.name} SECURED BY ${state.report.docket.securedBy} · NEXT ORDER: ${state.docket?.nextOrder||'PENDING'} · ${state.salvage?.earned?'SALVAGE REROLL ALREADY EARNED':'ONE CREW REROLL EARNED'}`:`RECOVERY DOCKET // ${state.report.docket.name} UNRECOVERED · NO PENALTY`;
     if(order){
       $('ledger-order').textContent=order.name;
       $('ledger-result').textContent=order.result==='paid'?'VERIFIED · +1 CREDIT · −1 STRAIN':`MISSED · +1 STRAIN${order.kind==='speed'?` · ${Math.floor(order.progress)}S ELAPSED`:''}`;
@@ -627,7 +652,7 @@ canvas.addEventListener('contextmenu',e=>e.preventDefault());
 document.addEventListener('mouseup',e=>{if(e.button===0)mouseDown=false;if(e.button===2)mouseRight=false;});
 document.addEventListener('visibilitychange',()=>{if(document.hidden){mouseDown=false;mouseRight=false;keys={};}});
 function dash(now){
-  if(!state||state.phase!=='combat'||me()?.dead||me()?.downed||settingsOpen||manualOpen||now-lastDash<2.8)return;
+  if(!state||state.phase!=='combat'||me()?.dead||me()?.downed||recovering()||settingsOpen||manualOpen||now-lastDash<2.8)return;
   lastDash=now;dashUntil=now+.19;
   const f=(keys.KeyW?1:0)-(keys.KeyS?1:0),s=(keys.KeyD?1:0)-(keys.KeyA?1:0);
   let dx=Math.cos(position.a)*f-Math.sin(position.a)*s,dy=Math.sin(position.a)*f+Math.cos(position.a)*s;
@@ -635,7 +660,7 @@ function dash(now){
   velocity.x=dx*13;velocity.y=dy*13;send({type:'dash'});sound(290,.18,.055);
 }
 function slide(now){
-  if(!state||state.phase!=='combat'||me()?.dead||me()?.downed||settingsOpen||manualOpen||!grounded||now-lastSlide<1.35||Math.hypot(velocity.x,velocity.y)<3.8)return;
+  if(!state||state.phase!=='combat'||me()?.dead||me()?.downed||recovering()||settingsOpen||manualOpen||!grounded||now-lastSlide<1.35||Math.hypot(velocity.x,velocity.y)<3.8)return;
   lastSlide=now;slideUntil=now+.72;
   const speed=Math.hypot(velocity.x,velocity.y);velocity.x*=8.7/speed;velocity.y*=8.7/speed;
   sound(95,.22,.04,'square');
@@ -654,19 +679,23 @@ document.addEventListener('keydown',e=>{
     return;
   }
   if(e.code==='KeyH'&&!e.repeat){e.preventDefault();manualOpen?closeManual():openManual();return;}
+  if(settings.toggleSprint&&['ShiftLeft','ShiftRight'].includes(e.code)&&!e.repeat&&state?.phase==='combat'&&!settingsOpen&&!manualOpen)sprintLatched=!sprintLatched;
   keys[e.code]=true;
   if(settingsOpen||manualOpen||reconnecting||!state||state.phase!=='combat')return;
   if(e.code==='KeyR'&&!e.repeat&&!me()?.downed)send({type:'reload'});
   if((e.code==='Digit1'||e.code==='Digit2')&&!e.repeat){send({type:'switch',slot:e.code==='Digit1'?0:1});lastFire=0;}
   if(e.code==='KeyE'&&!e.repeat)send({type:'skill'});
-  if(e.code==='KeyF'&&!e.repeat)send({type:'machineStart'});
+  if(e.code==='KeyF'&&!e.repeat){
+    if(docketInReach())send({type:'docketHold',holding:true});
+    else send({type:'machineStart'});
+  }
   if(e.code==='KeyG'&&!e.repeat)pingAtAim(e.shiftKey?'danger':'route');
   if(e.code==='KeyQ'&&!e.repeat)dash(performance.now()/1000);
   if((e.code==='ControlLeft'||e.code==='ControlRight')&&!e.repeat)slide(performance.now()/1000);
   if(e.code==='Space'&&!e.repeat&&grounded){jumpVelocity=5.7;grounded=false;sound(180,.12,.024,'sine');}
 });
-document.addEventListener('keyup',e=>{keys[e.code]=false;});
-window.addEventListener('blur',()=>{if(operating())send({type:'machineInput',action:'abort'});keys={};mouseDown=false;mouseRight=false;});
+document.addEventListener('keyup',e=>{keys[e.code]=false;if(e.code==='KeyF')send({type:'docketHold',holding:false});});
+window.addEventListener('blur',()=>{if(operating())send({type:'machineInput',action:'abort'});if(recovering()||keys.KeyF)send({type:'docketHold',holding:false});keys={};sprintLatched=false;mouseDown=false;mouseRight=false;});
 
 function updateMovement(dt,now,p){
   if(fallbackAim){
@@ -675,14 +704,15 @@ function updateMovement(dt,now,p){
     if(keys.ArrowUp)position.pitch=clamp(position.pitch+dt*1.4,-1.22,1.22);
     if(keys.ArrowDown)position.pitch=clamp(position.pitch-dt*1.4,-1.22,1.22);
   }
-  const f=(keys.KeyW?1:0)-(keys.KeyS?1:0),s=(keys.KeyD?1:0)-(keys.KeyA?1:0);
+  const f=recovering()?0:(keys.KeyW?1:0)-(keys.KeyS?1:0),s=recovering()?0:(keys.KeyD?1:0)-(keys.KeyA?1:0);
   let wishX=Math.cos(position.a)*f-Math.sin(position.a)*s,wishY=Math.sin(position.a)*f+Math.cos(position.a)*s;
   const length=Math.hypot(wishX,wishY);if(length){wishX/=length;wishY/=length;}
-  const sprinting=!!(keys.ShiftLeft||keys.ShiftRight)&&f>0&&now>=slideUntil;
+  const sprinting=!!(settings.toggleSprint?sprintLatched:(keys.ShiftLeft||keys.ShiftRight))&&f>0&&now>=slideUntil;
   const overclock=p.classId==='runner'&&p.skillActive?1.35:1;
   const momentum=p.upgrades.momentum&&p.momentumActive?1+.1*p.momentumStacks:1;
   const speed=(sprinting?6.15:4.25)*Math.pow(1.12,p.upgrades.sprint||0)*(p.talents?.r_stride?1.15:1)*overclock*momentum*(p.slowed?.65:1);
-  if(now<dashUntil){/* preserve the dash impulse */}
+  if(recovering()){velocity.x=0;velocity.y=0;}
+  else if(now<dashUntil){/* preserve the dash impulse */}
   else if(now<slideUntil){
     const drag=Math.exp(-dt*2.35);velocity.x=velocity.x*drag+wishX*dt*1.8;velocity.y=velocity.y*drag+wishY*dt*1.8;
   }else{
@@ -705,7 +735,7 @@ function updateMovement(dt,now,p){
   if(grounded&&planarSpeed>.4)bob+=dt*planarSpeed*2.05;
   landingKick=Math.max(0,landingKick-dt*.9);
   if(now-lastMove>.05){send({type:'move',x:position.x,y:position.y,a:position.a});lastMove=now;}
-  if((mouseDown||keys.KeyC)&&!p.reloading&&!(p.weapon==='borer'&&p.ventRemaining>0)){
+  if((mouseDown||keys.KeyC)&&!recovering()&&!p.reloading&&!(p.weapon==='borer'&&p.ventRemaining>0)){
     const interval=weapons[p.weapon].interval;
     if(now-lastFire>=interval/(Math.pow(1.22,p.upgrades.hotload||0)*(p.classId==='runner'&&p.skillActive?1.75:1))){
       send({type:'fire',a:position.a,pitch:position.pitch,height:eyeHeight+jumpHeight+floorHeightAt(map,position.x,position.y)});lastFire=now;

@@ -224,6 +224,17 @@ function makePickup(kind) {
   ring.rotation.x=Math.PI/2;ring.position.y=.05;g.add(ring);
   g.userData.mesh=mesh;return g;
 }
+function makeDocket(){
+  const g=new T.Group(),steel=mat(0x343b32,{metalness:.78,roughness:.58}),tag=mat(0xd3a958,{metalness:.35,roughness:.5}),lamp=mat(0xf5ce76,{emissive:0xe8aa46,emissiveIntensity:1.35});
+  box(g,[.86,.42,.54],[0,.29,0],steel);
+  box(g,[.73,.045,.44],[0,.53,0],tag);
+  box(g,[.47,.1,.04],[0,.38,-.29],tag);
+  for(const x of [-.34,.34])box(g,[.06,.12,.6],[x,.49,0],steel);
+  const beacon=new T.Mesh(new T.CylinderGeometry(.075,.095,.16,8),lamp);beacon.position.set(0,.67,0);g.add(beacon);
+  const ring=new T.Mesh(new T.TorusGeometry(.64,.027,5,32),new T.MeshBasicMaterial({color:0xeac26f,transparent:true,opacity:.72,depthWrite:false}));
+  ring.rotation.x=Math.PI/2;ring.position.y=.045;g.add(ring);
+  g.userData.beacon=beacon;g.userData.ring=ring;return g;
+}
 function weaponModel(kind) {
   const metals={pulse:0x7775a4,smg:0x416e62,rail:0x78766e,launcher:0x8a5543,arcgun:0x3e7183,cryo:0x547e95,saw:0x777253,burst:0x596742,harpoon:0x75654c,gravity:0x425f79,borer:0x74634b};
   const accents={pulse:0xb9aef1,smg:0x75d9bd,rail:0xffe4a6,launcher:0xff9359,arcgun:0x83d8f5,cryo:0xa5ecff,saw:0xe8d599,burst:0xe0f17b,harpoon:0xf0c58c,gravity:0x91c7ff,borer:0xffaa63};
@@ -393,7 +404,7 @@ export class GameScene {
     this.scene.add(new T.HemisphereLight(0xb5c2b0,0x141b17,1.25));
     const sun=new T.DirectionalLight(0xb8c8a1,.9);sun.position.set(4,9,8);this.scene.add(sun);
     this.world=new T.Group();this.scene.add(this.world);
-    this.entities=new Map();this.drops=new Map();this.projectiles=new Map();this.hazards=new Map();this.telegraphs=new Map();this.pings=new Map();this.predicted=[];this.skillRings=[];this.damageNumbers=[];this.impacts=[];
+    this.entities=new Map();this.drops=new Map();this.projectiles=new Map();this.hazards=new Map();this.telegraphs=new Map();this.pings=new Map();this.docketObj=null;this.predicted=[];this.skillRings=[];this.damageNumbers=[];this.impacts=[];
     this.machineZone=new T.Group();
     const machineRing=new T.Mesh(new T.TorusGeometry(3.2,.085,5,64),new T.MeshBasicMaterial({color:0xff785b,transparent:true,opacity:.8,depthWrite:false,depthTest:false}));
     machineRing.rotation.x=-Math.PI/2;machineRing.position.y=.1;this.machineZone.add(machineRing);
@@ -792,6 +803,13 @@ export class GameScene {
       for(const [graft,part] of Object.entries(obj.userData.graftMeshes))part.visible=p.grafts?.includes(graft)||false;
     }
     for(const [id,obj] of this.entities)if(!active.has(id)){this.scene.remove(obj);this.disposeGroup(obj);this.entities.delete(id);}
+    const docket=state.phase==='combat'&&state.docket?.state==='available'?state.docket:null;
+    if(docket){
+      if(!this.docketObj){this.docketObj=makeDocket();this.scene.add(this.docketObj);}
+      this.docketObj.position.set(docket.x,floorHeightAt(this.gridMap,docket.x,docket.y),docket.y);
+      this.docketObj.userData.beacon.material.emissiveIntensity=this.settings.reducedFlashes?1.1:1.15+.3*Math.sin(time*4);
+      this.docketObj.userData.ring.material.opacity=this.settings.reducedFlashes ? .72 : .55+.18*Math.sin(time*3);
+    }else if(this.docketObj){this.scene.remove(this.docketObj);this.disposeGroup(this.docketObj);this.docketObj=null;}
     const activeDrops=new Set();
     for(const d of state.drops){
       activeDrops.add(d.id);let obj=this.drops.get(d.id);

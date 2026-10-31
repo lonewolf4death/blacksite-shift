@@ -1,4 +1,4 @@
-export const BUILD_VERSION = '0.23.0';
+export const BUILD_VERSION = '0.24.0';
 export const bayNames = ['INTAKE FLOOR','CROSSFLOW','SPLIT PRESS','OFFSET CHUTE','SERVICE GANTRY','FILTER STACK','REJECTED GOODS'];
 
 // Tile 3 is a low, walkable equipment deck. Its outer half-tile slopes up so

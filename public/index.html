@@ -16,7 +16,7 @@
   <div id="hud" class="hidden">
     <header class="hud-top">
       <div class="brand-mini"><span class="brand-mark">◈</span> B/S <span class="brand-divider">/</span> <span class="muted">BLACKSITE SHIFT</span></div>
-      <div class="wave-block"><span class="eyebrow" id="stage-label">THE FOUNDRY</span><strong id="wave-label">WAVE 01</strong><span id="threat-label">HOSTILES 00</span><span id="pressure-hud" class="pressure-hud hidden">PRESSURE 0/2</span><span id="salvage-hud" class="salvage-hud hidden">SALVAGE 0/7</span><span id="contract-hud" class="contract-hud hidden">WORK ORDER · PENDING</span><span id="overtime-hud" class="overtime-hud hidden">⚡ OVERTIME ACTIVE</span></div>
+      <div class="wave-block"><span class="eyebrow" id="stage-label">THE FOUNDRY</span><strong id="wave-label">WAVE 01</strong><span id="threat-label">HOSTILES 00</span><span id="pressure-hud" class="pressure-hud hidden">PRESSURE 0/2</span><span id="salvage-hud" class="salvage-hud hidden">SALVAGE 0/7</span><span id="docket-hud" class="docket-hud hidden">RECOVERY DOCKET AVAILABLE</span><span id="contract-hud" class="contract-hud hidden">WORK ORDER · PENDING</span><span id="overtime-hud" class="overtime-hud hidden">⚡ OVERTIME ACTIVE</span></div>
       <div class="room-block"><span class="eyebrow">SQUAD CHANNEL</span><button id="copy-code" title="Copy room code">CODE <strong id="room-code">------</strong> <span>⧉</span></button><span class="ping-help">G PING · SHIFT+G DANGER</span><button id="manual-hud" class="settings-hud" title="Field manual">▤ FIELD MANUAL · H</button><button id="settings-hud" class="settings-hud" title="Settings">⚙ SETTINGS</button></div>
     </header>
     <div id="boss-bar" class="boss-bar hidden"><span id="boss-name">THE WARDEN</span><div class="boss-track"><div id="boss-fill"></div></div><small id="boss-value">100%</small></div>
@@ -30,6 +30,7 @@
     <div id="crosshair"><i></i><i></i><i></i><i></i><b></b></div>
     <div id="danger-cue" class="danger-cue hidden">SNIPER LOCK</div>
     <div id="machine-hint" class="machine-hint hidden"><span id="machine-hint-text">F · CONNECT MACHINE</span><div class="machine-progress"><i id="machine-progress-fill"></i></div></div>
+    <div id="docket-hint" class="docket-hint hidden"><span id="docket-hint-text">HOLD F · SECURE RECOVERY DOCKET</span><div class="docket-progress"><i id="docket-progress-fill"></i></div></div>
     <div id="machine-console" class="machine-console hidden" aria-live="polite"><div class="machine-console-top"><span>CONTRACTOR CONTROL // LIVE COMBAT</span><strong id="console-station">STATION 01</strong></div><h2 id="console-mode">VALVE CASCADE</h2><p id="console-rule">Select the lit valve and seal each stage.</p><div class="machine-console-progress"><span id="console-step">STAGE 1 / 3</span><span id="console-mistakes">FAULTS 0</span></div><div id="console-channels" class="machine-channels"></div><div id="console-sweep" class="console-sweep hidden"><i id="console-zone"></i><b id="console-needle"></b></div><div id="console-stability" class="console-stability hidden"><i id="console-stability-fill"></i></div><div id="console-status" class="console-status">ALIGN THE CONTROL</div><footer>A / D SELECT · SPACE CONFIRM · F CANCEL<br>THE ENCOUNTER CONTINUES WHILE YOU OPERATE</footer></div>
     <div id="hitmarker" class="hitmarker">×</div>
     <div id="reload-cue" class="reload-cue hidden">R · PRECISION WINDOW</div>
@@ -38,7 +39,7 @@
   </div>
 
   <main id="menu" class="screen">
-    <div class="menu-rail"><span>RESTRICTED ACCESS // SECTOR 09</span><span>BUILD 0.23 / OVERTIME PROTOCOLS</span></div>
+    <div class="menu-rail"><span>RESTRICTED ACCESS // SECTOR 09</span><span>BUILD 0.24 / RECOVERY DOCKET</span></div>
     <div class="menu-content">
       <div class="kicker"><span class="live-dot"></span> MULTIPLAYER ROGUELITE FPS</div>
       <h1>BLACKSITE<br><em>SHIFT</em><span class="title-period">.</span></h1>
@@ -74,6 +75,7 @@
     <div class="upgrade-wrap"><div class="upgrade-heading"><span class="eyebrow" id="choice-stage">WAVE CLEARED // STATION ONLINE</span><h2>BUILD YOUR <em>LOADOUT</em></h2><p>Choose an augment, armory weapon, class talent, and boss graft when available. Automatic departure occurs at the visible countdown.</p><span id="upgrade-timer">60</span></div>
       <div class="contract-ledger" aria-label="Contract account"><div><small>WORK ORDER / SETTLEMENT</small><strong id="ledger-order">AWAITING ASSIGNMENT</strong><span id="ledger-result">A VERIFIED ORDER PAYS ONE CREDIT</span></div><div><small>SECTOR CREDIT</small><strong id="ledger-credit">0 / 2</strong><span>TWO CREDITS PAY AN EXTRA BOSS DRAFT</span></div><div><small>CONTRACT STRAIN</small><strong id="ledger-strain">0 / 2</strong><span id="ledger-strain-effect">MISSED ORDERS ADD NEXT-WAVE REINFORCEMENTS</span></div></div>
       <div class="encounter-report" aria-label="Previous encounter report"><div><small>INCIDENT REPORT // PREVIOUS ENCOUNTER</small><strong id="report-summary">AWAITING REPORT</strong><span id="report-contribution">Equipment telemetry will appear after the first clear.</span></div><div id="report-metrics" class="report-metrics"></div><div id="report-crew" class="report-crew"></div></div>
+      <div id="docket-ledger" class="docket-ledger hidden" aria-label="Recovery docket settlement">RECOVERY DOCKET // UNRECOVERED</div>
       <div class="overtime-terminal" aria-label="Overtime terminal">
         <div class="overtime-copy"><small>CONTRACTOR AUTHORIZATION // SQUAD VOTE</small><strong id="overtime-name">OVERTIME PROTOCOL</strong><p id="overtime-hazard">Unstable power: faster reinforcements and more frequent floor hazards.</p><span id="overtime-reward">REWARD ON CLEAR: AN EXTRA AUGMENT DRAFT FOR EVERY SURVIVOR</span><small id="overtime-machine">NEXT MACHINE: HYDRAULIC SHEAR</small></div>
         <div class="overtime-controls"><small id="overtime-tally">0 YES · 0 NO · 0 CREW</small><div><button id="vote-stable" type="button">STABLE ROUTE</button><button id="vote-overtime" type="button">ACTIVATE OVERTIME ⚡</button></div><small id="overtime-my-vote">MAJORITY REQUIRED · TIES STAY STABLE</small></div>
@@ -88,7 +90,7 @@
     <div class="panel gameover-panel"><div class="panel-top"><span>INCIDENT REPORT</span><span class="critical" id="result-signal">● SIGNAL LOST</span></div><div class="panel-body"><div class="eyebrow" id="result-kicker">RUN TERMINATED</div><h2 id="result-title">END OF<br><em>SHIFT.</em></h2><p id="gameover-stats">Your squad reached wave 01.</p><button id="retry-button" class="primary wide">RUN IT BACK <span>↗</span></button></div></div>
   </section>
   <section id="manual" class="panel-overlay hidden" aria-label="Field manual">
-    <div class="panel manual-panel"><div class="panel-top"><span>CONTRACTOR FIELD INTELLIGENCE // REV 0.23</span><button id="manual-close" type="button">✕ CLOSE</button></div>
+    <div class="panel manual-panel"><div class="panel-top"><span>CONTRACTOR FIELD INTELLIGENCE // REV 0.24</span><button id="manual-close" type="button">✕ CLOSE</button></div>
       <nav class="manual-nav" aria-label="Manual sections"><button type="button" data-manual="weapons">WEAPONS</button><button type="button" data-manual="effects">EFFECTS</button><button type="button" data-manual="classes">CLASSES</button><button type="button" data-manual="augments">AUGMENTS</button><button type="button" data-manual="enemies">THREATS</button></nav>
       <div id="manual-content" class="manual-content"></div><div class="manual-foot">THE RUN CONTINUES WHILE THIS TERMINAL IS OPEN · H / ESC TO CLOSE</div></div>
   </section>
@@ -104,6 +106,7 @@
         <div class="setting-row"><label for="setting-bob">VIEW BOB <output id="value-bob">70%</output></label><input id="setting-bob" type="range" min="0" max="100" step="5" value="70"></div>
         <div class="setting-row"><label for="setting-allyProjectiles">ALLY PROJECTILE VISIBILITY <output id="value-allyProjectiles">65%</output></label><input id="setting-allyProjectiles" type="range" min="25" max="100" step="5" value="65"></div>
         <label class="toggle-row"><input id="setting-invert" type="checkbox"><span>INVERT VERTICAL LOOK</span></label>
+        <label class="toggle-row"><input id="setting-toggleSprint" type="checkbox"><span>TOGGLE SPRINT · PRESS SHIFT TO SWITCH</span></label>
         <label class="toggle-row"><input id="setting-reducedFlashes" type="checkbox"><span>REDUCE FLASHING LIGHTS · KEEP THREAT WARNINGS VISIBLE</span></label>
         <div class="controls-grid"><span>WASD</span><span>MOVE</span><span>SHIFT</span><span>SPRINT</span><span>SPACE</span><span>JUMP</span><span>CTRL</span><span>SLIDE</span><span>Q</span><span>DASH</span><span>E</span><span>CLASS SKILL</span><span>F</span><span>HOLD TO ARM MACHINE</span><span>G</span><span>ROUTE PING</span><span>SHIFT+G</span><span>DANGER PING</span><span>V</span><span>HOLD TO REVIVE</span><span>R</span><span>RELOAD</span><span>1 / 2</span><span>SWITCH WEAPON</span></div>
         <p class="settings-note">Settings save automatically. The run continues while this panel is open.</p>

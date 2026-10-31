@@ -10,6 +10,8 @@ The Overtime terminal offers a squad choice after each clear except the final on
 
 During combat, press **G** to mark a route or **Shift+G** to mark danger at the point ahead of your aim. Pings remain visible to the squad for six seconds and are limited to a 15 m clear line of sight. The squad panel shows teammate health in combat; between waves, it shows which choice or vote each operative still needs. Everyone joining a room must use the same build version.
 
+On waves **2, 5, and 8**, one tagged recovery docket appears on a reachable side route away from machinery strikes and floor hazards. Face it within 1.6 m and hold **F** for 2.5 seconds during combat. You can turn and call out but cannot move, fire, dash, or use a skill while securing it; release, damage, a disconnect, or turning away interrupts the attempt. A teammate can cover you. Securing it reveals the next boss work order at the service terminal before the Overtime vote. If the crew missed the kill salvage quota, every surviving participant also receives one personal augment-offer reroll; a docket and the quota never grant more than one reroll. Players joining during service cannot claim that encounter's bonus. If the fight ends first, the docket is recorded as unrecovered with no penalty and no extra cleanup phase.
+
 If a player's connection drops, the live host reserves their squad slot for 60 seconds. The game retries automatically from the same running window and restores the same identity, class, weapons, augments, talents, grafts, and combat state. Teammates see a reconnect countdown. The reservation expires after 60 seconds and then frees the slot. Reconnection requires the host's game to remain running; closing the host ends its room.
 
 Press **H** at any point to open the Field Manual. It lists the exact base values and behavior of every weapon, effect, skill, talent, graft, augment, and hostile. Close it with **H** or **Escape**; the run continues while it is open.
@@ -40,7 +42,7 @@ A verified order pays **one sector credit** and removes one contract strain. A m
 
 The combat HUD names the current order, its live measure, and current strain. After each clear, the service terminal shows a personal encounter report for damage, kills, skill uses, revives, machine cycles, bank hits, reactions, and other actions alongside crew contributions. The service terminal shows the result, sector credits, strain, and next-wave reinforcement cost. The manual records all three orders and the accounting rule. The exact rule is visible before players commit to an Overtime vote.
 
-In Settings, **Reduced Flashing Lights** steadies decorative pulse lights and animated HUD flashing. Hazard regions, enemy windups, machine warnings, and status colors remain visible.
+In Settings, **Reduced Flashing Lights** steadies decorative pulse lights and animated HUD flashing. Hazard regions, enemy windups, machine warnings, and status colors remain visible. **Toggle Sprint** changes Shift from a held input to a press-to-switch control; View Bob can be set to zero.
 
 ## Classes and talents
 

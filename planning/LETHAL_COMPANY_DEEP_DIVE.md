@@ -2,6 +2,8 @@
 
 Prepared October 30, 2026. This expands Section 3 of [PRODUCTION_PLAN.md](PRODUCTION_PLAN.md) and the shorter entry in [REFERENCE_DEVELOPMENT.md](REFERENCE_DEVELOPMENT.md). It is design research based on official product and developer material, plus inspection of the current BLACKSITE SHIFT source. I did not play or instrument Lethal Company for this pass. Statements labelled **documented** come from the linked sources; statements labelled **inference** are design analysis; **proposal** means a BLACKSITE SHIFT feature that is not yet implemented.
 
+**October 31 refinement:** the original “current v0.22” table and recovery-docket proposal below are a historical design baseline. The [v0.24 implementation section](#october-31-refinement-and-v024-implementation) records what was actually built, what changed from that proposal, and what still requires a co-op playtest.
+
 ## Sources and the useful evidence
 
 | Official source | Documented detail | Design question it raises |
@@ -149,6 +151,44 @@ The story remains a contractor sending a maintenance crew into a sealed processi
 - **World integrity:** every spawned object and entrant is wall-safe; every optional detour has a return route; raised decks, low cover and projectile height agree; no generated junction traps a player or enemy.
 - **Pacing:** a standard firefight starts promptly, the optional detour takes less than 20 seconds when taken, and the service vote is not prolonged by decorative animation.
 - **Identity:** BLACKSITE remains a contractor's sealed processing complex with maintenance crew, work orders, processing machines and Overtime. It does not reproduce Lethal Company's moons, ship, company logo, monsters, scrap props, suits, terminal layout or vulnerable scavenging pace.
+
+## October 31 refinement and v0.24 implementation
+
+### What the sources establish, and what they do not
+
+The [official Steam description](https://store.steampowered.com/app/1966720/Lethal_Company/) explicitly connects a crew quota, riskier destinations, ship-side radar/terminal support, useful tools, and a worsening night. The developer's [V70 notes](https://store.steampowered.com/news/posts/?enddate=1748753606&feed=steam_community_announcements) describe a radar with a room display, compass, route to the exit, and terrain contours. The [V80 notes](https://steamcommunity.com/app/1966720/allnews) explain the utility-slot change: useful tools were underused when they consumed a slot players wanted for scrap. The same notes describe stronger entrance/departure feedback, factory room additions, accessible sprint and bob settings, and a limit on creature diversity for some moons. These are developer-stated changes, not proof that a particular BLACKSITE mechanic will be fun. I have not measured Lethal Company's player behavior or copied its ship, moons, monsters, or gear.
+
+**Inference:** the cooperative loop is carried by a visible common obligation, unequal but complementary information, a route with a return cost, and a known point at which the group decides it has enough. The useful part for a combat-forward BLACKSITE run is one short optional job within a firefight. A second looting economy or a mandatory walk back across an empty level would dilute the guns and movement that must carry the game before upgrades.
+
+### The recovery docket: a bounded crew job
+
+The v0.24 prototype replaces the broad recovery-beat proposal above with **one docket on waves 2, 5, and 8**. These are the second normal encounters in the Foundry, Cryolab, and Core. It is never in wave one, which teaches machinery, or a boss wave, which has its own visual and timing load. The record's sector-specific name, amber cage/lamp silhouette, HUD distance, nearby hold prompt, progress bar, start/cancel tones, and service settlement distinguish it from an automatic health drop. The player learns both the route and reward before leaving the fight. The object is optional; when the last hostile falls, an unfinished recovery is stamped *unrecovered* and service starts immediately.
+
+Location is deterministic from the run seed and wave. The server floods walkable cells from the crew entry and considers only cells with actor clearance. It excludes the entry's immediate area, all station controls, all machine strike circles with a buffer, and all active floor hazard footprints with a buffer. A seed chooses a side-route anchor and the nearest eligible reachable cell. The test suite checks 28 seeds in each of the three eligible waves and reproducibility of each placement. This is a stronger placement rule than random free-space selection, but it does not yet prove every route *feels* worth taking; low walls and decks still need human path and sightline checks.
+
+The first operative to start a valid hold becomes the temporary operator. The server checks combat phase, identity, life/connection state, distance at most 1.6 m, clear line of sight, a facing dot product of at least 0.55, and no simultaneous machine session. The hold takes 2.5 continuous seconds. During it the server rejects movement, firing, dashing, and class skills. A hit, release, turn away, down, disconnect, or encounter clear cancels the attempt; it does not consume the docket. A second operative cannot reset or steal an active hold. On completion the server records one secured event and broadcasts its owner and location. This design asks another player to watch a lane or draw a threat while the operator works. In solo play it remains a voluntary risk.
+
+### Reward and departure contract
+
+Securing the docket reveals the **next boss work-order type** in the service terminal before the squad votes on Overtime. This is actionable information: a crew expecting a machine order can judge a fault-heavy Overtime protocol differently from one expecting a timed clearance or intact-signal order. It also provides one personal augment-offer reroll to each survivor **only when the kill salvage quota was missed**. If the quota was already met, the information remains the benefit. The two reroll sources cap at one per operative; no one can claim the squad reward first. A player joining during service receives a base provisioning draft but cannot claim a reroll or bonus draft from a wave they did not enter. Reconnecting crew retain their encounter eligibility. Drafts remain personal, a strict majority still authorizes Overtime, a tie still chooses Stable Route, and host departure does not convert a docket into a vote.
+
+There is no separate recovery phase, new enemy wave, evidence currency, carrying animation, inventory slot, or grace extension to the service timer. The combat clear is the departure boundary. This deliberately narrows the earlier proposal: a recovery that is routinely collected in an empty room would be a delay with no cooperative decision. A future physical carry or return trip should only be considered after observing players voluntarily change route and assign cover here.
+
+### Communication, feel, and accessibility follow-through
+
+The operator's hold and the crew's role are stated through local prompt, shared announcement, progress, and sound. G route pings and Shift+G danger pings remain available to a squad without voice. The incident report attributes a secured docket to its operator alongside machine, revival, guard, and combat actions, so support is visible without turning the result into a damage leaderboard. The service line reports secured or unrecovered and the next order. This is a first information role that keeps all four players in the arena.
+
+V80's utility-slot lesson is kept as a future constraint: a scanner or clamp should not displace either weapon just to exist. This pass instead adds **Toggle Sprint** to the existing sensitivity, FOV, view-bob, and flashing settings. View Bob can already reach zero. The new recovery model's pulse steadies with Reduced Flashing Lights, while its outline, tag, and HUD text remain. The most dangerous enemy and machinery warnings still occupy the top visual/audio priority.
+
+### Playtest questions that determine whether this stays
+
+1. In a four-person no-voice run, does one player ping or approach the record and another deliberately cover them? Record attempts, completions, damage interruptions, and whether a crew member can explain the reward before service.
+2. How much extra combat time does a docket add on waves 2, 5, and 8? Compare seeded runs with players told to ignore it against runs where they may choose it. If most recoveries occur after enemies are gone or add routine waiting, shorten the hold or remove the objective.
+3. Does knowing the next boss work order change an Overtime ballot? Compare the vote explanation with and without a secured docket. If it does not affect a decision, the information reward needs a better question to answer.
+4. Is the object easy to spot without hiding a sniper lock, machine ring, or downed ally? Test default and Reduced Flashing Lights with four upgraded players firing together.
+5. Can new players recognize a class's gun and skill before attempting any optional recovery? If the recovery is more memorable only because starter weapons feel weak, fix the weapon first.
+
+The first four questions need recorded human sessions; automated placement and state tests cannot answer them. The contractor premise and four pillars remain the acceptance gate: capable guns, action-changing adaptation, worksite decisions, and legible escalation.
 
 ## Summary decision
 

@@ -92,6 +92,7 @@ const hazardLayouts=[
 ];
 const machineSite={x:12.5,y:7.5,targetX:12.5,targetY:12.5,radius:3.2};
 const MACHINE_HOLD_SECONDS=.65;
+const DOCKET_HOLD_SECONDS=2.5;
 const MACHINE_MODES={valves:{name:'VALVE CASCADE',steps:3,channels:3,lockout:1.5},circuit:{name:'CIRCUIT BRIDGE',steps:3,channels:4,lockout:1.1},pressure:{name:'PRESSURE BALANCE',steps:4,channels:5,lockout:.65}};
 function machineStations(grid,variant,wave,seed){
   const difficulty=wave%3===0?'pressure':['valves','circuit','pressure','valves','circuit','pressure','valves'][variant];
@@ -199,6 +200,26 @@ export function findSafeCrewSpawns(grid,count,stageIndex=0){
   if(selected.length<count)throw new Error(`No safe crew entry for ${count} players in stage ${stageIndex}`);
   return selected;
 }
+function createRecoveryDocket(room,entries){
+  // One optional recovery on the second normal wave of each sector. Candidate
+  // cells are reachable from the crew entry and clear of active machinery.
+  if(room.wave%3!==2)return null;
+  const grid=room.grid,start=entries[0],queue=[[Math.floor(start.x),Math.floor(start.y)]],seen=new Set([`${Math.floor(start.x)},${Math.floor(start.y)}`]);
+  for(let head=0;head<queue.length;head++)for(const [dx,dy] of [[1,0],[-1,0],[0,1],[0,-1]]){
+    const [x,y]=queue[head],nx=x+dx,ny=y+dy,key=`${nx},${ny}`;
+    if(nx<2||nx>22||ny<2||ny>22||seen.has(key)||!free(nx+.5,ny+.5,.55,grid))continue;
+    seen.add(key);queue.push([nx,ny]);
+  }
+  const anchors=[[5.5,6.5],[19.5,6.5],[5.5,18.5],[19.5,18.5]];
+  const salt=Math.imul((room.runSeed||0)^room.wave,0x9e3779b9)>>>0,target=anchors[salt%anchors.length];
+  const candidates=queue.map(([x,y])=>({x:x+.5,y:y+.5})).filter(q=>
+    entries.every(p=>Math.hypot(q.x-p.x,q.y-p.y)>=5)&&
+    room.machines.every(m=>Math.hypot(q.x-m.x,q.y-m.y)>=2.5&&Math.hypot(q.x-m.targetX,q.y-m.targetY)>=m.radius+.85)&&
+    hazardLayouts[room.stageIndex].every(h=>Math.hypot(q.x-h.x,q.y-h.y)>=h.r+.85));
+  candidates.sort((a,b)=>Math.hypot(a.x-target[0],a.y-target[1])-Math.hypot(b.x-target[0],b.y-target[1])||a.y-b.y||a.x-b.x);
+  if(!candidates.length)throw new Error(`No safe recovery docket in bay ${room.layoutId}`);
+  return {...candidates[0],state:'available',holderId:null,startedAt:0,securedBy:null,name:['PRESS LOG','COOLANT RECORD','REACTOR AUDIT'][room.stageIndex]};
+}
 function visible(x1, y1, x2, y2, grid=map) {
   const d = Math.hypot(x2-x1, y2-y1);
   for (let s = .15; s < d; s += .15) if (wall(x1 + (x2-x1)*s/d, y1 + (y2-y1)*s/d,grid)) return false;
@@ -221,7 +242,7 @@ function shuffled(room,list){
   return result;
 }
 const safeName = v => String(v || 'OPERATIVE').replace(/[^a-zA-Z0-9 _-]/g, '').trim().slice(0, 16) || 'OPERATIVE';
-const newEncounterMetrics=()=>({damage:0,kills:0,skillUses:0,revives:0,healing:0,guardedDamage:0,overclockKills:0,machineCycles:0,staggered:0,bankHits:0,reactions:0,precisionReloads:0});
+const newEncounterMetrics=()=>({damage:0,kills:0,skillUses:0,revives:0,healing:0,guardedDamage:0,overclockKills:0,machineCycles:0,dockets:0,staggered:0,bankHits:0,reactions:0,precisionReloads:0});
 
 function code() {
   let c;
@@ -231,7 +252,7 @@ function code() {
 function makeRoom(c) {
   const room = { code: c, players: new Map(), enemies: [], projectiles: [], drops: [], pings:[], phase: 'lobby', wave: 0,
     timer: 0, spawnLeft: 0, spawnTimer: 0, seq: 1, clock: 0, feed: [], snapshotTimer: 0,grid:map,stageIndex:0,hazardStart:0,hazardCycle:-1,
-    overtimeActive:false,protocol:null,machine:null,runSeed:0,seedOverride:null,layoutId:0,hostId:null,intermissionSeconds:60,
+    overtimeActive:false,protocol:null,machine:null,docket:null,runSeed:0,seedOverride:null,layoutId:0,hostId:null,intermissionSeconds:60,
     encounterStart:0,pressureBand:0,order:null,salvage:0,salvageTarget:0,salvageEarned:false,
     workOrder:null,contractCredits:0,contractStrain:0,contractBonus:false,lastReport:null };
   rooms.set(c, room);
@@ -254,7 +275,7 @@ function createPlayer(ws, name, room, requestedClass) {
     downed:false, downedUntil:0, reviveProgress:0, reviveTargetId:null, reviveIntentAt:-100, selfRevives:0,
     reconnectToken:crypto.randomBytes(24).toString('hex'),disconnected:false,reconnectUntil:0,
     skillReadyAt: 0, skillUntil: 0, wardUntil:0, momentumUntil:0, momentumStacks:0,arcCharges:0,phaseCharges:0,reclaimerReadyAt:0,
-    encounterMetrics:newEncounterMetrics() };
+    encounterMetrics:newEncounterMetrics(),encounterWave:room.phase==='intermission'?room.wave+1:room.wave };
   room.players.set(id, p);
   room.hostId ||= id;
   return p;
@@ -397,6 +418,9 @@ function snapshot(room) {
     order:room.order?{id:room.order.id,name:room.order.name,detail:room.order.detail}:null,
     pressureBand:room.pressureBand||0,encounterSeconds:room.phase==='combat'?Math.floor(room.clock-(room.encounterStart??room.clock)):0,
     salvage:{count:room.salvage||0,target:room.salvageTarget||0,earned:!!room.salvageEarned},
+    docket:room.docket?{x:room.docket.x,y:room.docket.y,name:room.docket.name,state:room.docket.state,
+      holderId:room.docket.holderId,progress:room.docket.holderId?clamp((room.clock-room.docket.startedAt)/DOCKET_HOLD_SECONDS,0,1):0,
+      securedBy:room.docket.securedBy,nextOrder:room.docket.state==='secured'&&room.wave<9?workOrders[selectWorkOrder(room.runSeed,room.wave+1)].name:null}:null,
     contract:{credits:room.contractCredits||0,strain:room.contractStrain||0,bonus:!!room.contractBonus},
     report:room.phase==='intermission'||room.phase==='victory'?room.lastReport:null,
     workOrder:room.workOrder?{
@@ -452,9 +476,10 @@ export function rerollAugments(room,p,token){
   return true;
 }
 export function chooseOptions(room, p, bonus=false, bossReward=room.wave%3===0) {
+  const participated=p.encounterWave===undefined||p.encounterWave===room.wave;
   dealAugments(room,p);
-  p.augmentPicksRemaining=1+Number(!!bonus)+Number(!!room.contractBonus);
-  p.rerolls=room.salvageEarned?1:0;
+  p.augmentPicksRemaining=1+Number(!!bonus&&participated)+Number(!!room.contractBonus&&participated);
+  p.rerolls=participated&&(room.salvageEarned||room.docket?.state==='secured')?1:0;
   p.augmentReady = false; p.ready = false;
   p.overtimeVote=room.wave>=9?'stable':null;
   p.weaponChoices = room.wave % 3 === 0 || room.wave === 1
@@ -494,8 +519,10 @@ export function startWave(room) {
   room.drops.length = 0;
   room.pings = [];
   const crewEntries=findSafeCrewSpawns(room.grid,room.players.size,room.stageIndex);
+  room.docket=createRecoveryDocket(room,crewEntries);
   for (const [index,p] of [...room.players.values()].entries()) {
     p.ready = false; p.choices = [];p.weaponChoices=[];p.graftChoices=[];p.overtimeVote=null;
+    p.encounterWave=room.wave;
     p.encounterMetrics=newEncounterMetrics();
     p.slotHeat=[0,0];p.slotVentUntil=[0,0];p.controlCharges=0;
     if (room.wave === 1) { p.hp = p.maxHp; p.dead = false; p.kills = 0; }
@@ -508,6 +535,7 @@ export function startWave(room) {
   if(room.wave%3===0)spawnBoss(room);
   announce(room, `${stages[room.stageIndex].name} // ${room.wave%3===0?'BOSS SIGNAL':'WAVE '+String(room.wave).padStart(2,'0')}`);
   announce(room,`WORK ORDER // ${workOrders[workKind].name} · ${room.workOrder.target}${workKind==='speed'?'S':workKind==='machine'?' TARGETS':''}`);
+  if(room.docket)announce(room,`RECOVERY DOCKET // ${room.docket.name} · NEXT ORDER INTEL + REROLL IF QUOTA MISSED`);
   if(room.overtimeActive)announce(room,`${activeProtocol(room).name} // ${activeProtocol(room).notice}`);
 }
 function beginRun(room) {
@@ -516,6 +544,7 @@ function beginRun(room) {
   room.runSeed=room.seedOverride??crypto.randomBytes(4).readUInt32LE(0);
   room.rngState=room.runSeed;
   room.overtimeActive=false;
+  room.docket=null;
   room.protocol=null;
   room.lastReport=null;
   for (const [crewIndex,p] of [...room.players.values()].entries()) {
@@ -585,6 +614,7 @@ function hurt(room, p, amount) {
   p.hp = Math.max(0, p.hp - actual);
   if(p.upgrades?.ward){p.wardUntil=room.clock+2;p.wardStrength=.8;}
   p.hurtAt = room.clock;
+  if(room.docket?.holderId===p.id){room.docket.holderId=null;room.docket.startedAt=0;broadcastFx(room,'docketAbort',room.docket.x,room.docket.y);}
   const operated=room.machines?.find(m=>m.session?.holderId===p.id);
   if(operated){operated.session.lockProgress=0;operated.session.lockAt=Math.max(operated.session.lockAt,room.clock+.6);broadcastFx(room,'machineError',operated.x,operated.y);}
   if(p.reviveTargetId){const target=room.players.get(p.reviveTargetId);if(target)target.reviveProgress=0;p.reviveTargetId=null;p.reviveIntentAt=-100;}
@@ -678,6 +708,7 @@ export function dealDamage(room,p,enemy,raw,crit,entries){
 function sendDamage(p,entries){if(entries.size)send(p.ws,{type:'damage',hits:[...entries.values()]});}
 export function activateMachine(room,p,m=room.machine){
   if(room.phase!=='combat'||!m||m.state!=='ready'||p.dead||p.downed||p.disconnected||
+     room.docket?.holderId===p.id||
      room.players.get(p.id)!==p||Math.hypot(p.x-(m.x??machineSite.x),p.y-(m.y??machineSite.y))>2.2||
      !visible(p.x,p.y,m.x??machineSite.x,m.y??machineSite.y,room.grid))return false;
   m.state='warning';m.fireAt=room.clock+1.25;m.readyAt=room.clock+(room.overtimeActive?(activeProtocol(room).machineCooldown||17):17);m.triggeredBy=p.id;m.holderId=null;m.session=null;
@@ -704,8 +735,42 @@ export function requestMachineHold(room,p,holding){
   broadcastFx(room,'machineHandle',machineSite.x,machineSite.y);
   return true;
 }
+function canRecoverDocket(room,p){
+  const d=room.docket;
+  if(room.phase!=='combat'||!d||d.state!=='available'||p.dead||p.downed||p.disconnected||room.players.get(p.id)!==p)return false;
+  if(room.machines?.some(m=>m.session?.holderId===p.id))return false;
+  const distance=Math.hypot(d.x-p.x,d.y-p.y);
+  if(distance>1.6||distance<.05||!visible(p.x,p.y,d.x,d.y,room.grid))return false;
+  const angle=Math.atan2(d.y-p.y,d.x-p.x);
+  return Math.cos(angle-p.a)>=.55;
+}
+export function requestRecoveryHold(room,p,holding){
+  const d=room.docket;
+  if(!d||d.state!=='available')return false;
+  if(!holding){
+    if(d.holderId!==p.id)return false;
+    d.holderId=null;d.startedAt=0;broadcastFx(room,'docketAbort',d.x,d.y);return true;
+  }
+  if(d.holderId||!canRecoverDocket(room,p))return false;
+  d.holderId=p.id;d.startedAt=room.clock;
+  announce(room,`${p.name} // RECOVERING ${d.name} · COVER THE OPERATOR`);
+  broadcastFx(room,'docketStart',d.x,d.y);
+  return true;
+}
+function updateRecoveryDocket(room){
+  const d=room.docket;if(!d||d.state!=='available'||!d.holderId)return;
+  const p=room.players.get(d.holderId);
+  if(!p||!canRecoverDocket(room,p)){
+    d.holderId=null;d.startedAt=0;broadcastFx(room,'docketAbort',d.x,d.y);return;
+  }
+  if(room.clock-d.startedAt<DOCKET_HOLD_SECONDS)return;
+  d.state='secured';d.securedBy=p.name;d.holderId=null;d.startedAt=0;
+  if(p.encounterMetrics)p.encounterMetrics.dockets++;
+  announce(room,`${d.name} SECURED BY ${p.name} // NEXT ORDER INTEL · REROLL IF QUOTA MISSED`);
+  broadcastFx(room,'docketSecured',d.x,d.y);
+}
 export function startMachineSession(room,p){
-  if(room.phase!=='combat'||p.dead||p.downed||p.disconnected||room.players.get(p.id)!==p)return false;
+  if(room.phase!=='combat'||p.dead||p.downed||p.disconnected||room.players.get(p.id)!==p||room.docket?.holderId===p.id)return false;
   if(room.machines?.some(m=>m.session?.holderId===p.id))return false;
   const station=(room.machines||[]).filter(m=>m.state==='ready'&&!m.session&&Math.hypot(p.x-m.x,p.y-m.y)<=2.2&&visible(p.x,p.y,m.x,m.y,room.grid))
     .sort((a,b)=>Math.hypot(p.x-a.x,p.y-a.y)-Math.hypot(p.x-b.x,p.y-b.y))[0];
@@ -808,7 +873,8 @@ export function settleWorkOrder(room){
 export function buildEncounterReport(room){
   const report={wave:room.wave,duration:Math.round(room.clock-(room.encounterStart??room.clock)),
     workOrder:room.workOrder?.result||'unresolved',overtime:room.overtimeActive?activeProtocol(room).name:null,
-    salvage:!!room.salvageEarned,crew:[...room.players.values()].map(p=>({id:p.id,name:p.name,classId:p.classId,
+    salvage:!!room.salvageEarned,docket:room.docket?{name:room.docket.name,secured:room.docket.state==='secured',securedBy:room.docket.securedBy}:null,
+    crew:[...room.players.values()].map(p=>({id:p.id,name:p.name,classId:p.classId,
       ...newEncounterMetrics(),...p.encounterMetrics}))};
   room.lastReport=report;
   return report;
@@ -824,7 +890,7 @@ function spawnPlayerProjectile(room,p,w,angle,pitch,shot){
 }
 export function fire(room, p, aim, verticalAim = 0, height = 1.58) {
   if (room.phase !== 'combat' || p.dead || p.downed || p.reloadEnd > 0 ||(p.slotVentUntil?.[p.slot]||0)>room.clock ||
-      room.machines?.some(m=>m.session?.holderId===p.id)||
+      room.machines?.some(m=>m.session?.holderId===p.id)||room.docket?.holderId===p.id||
       (p.reviveTargetId&&room.clock-p.reviveIntentAt<.3)) return;
   const w = weapons[p.weapon];
   const overclock = p.classId==='runner' && room.clock < p.skillUntil ? 1.75 : 1;
@@ -1066,7 +1132,7 @@ export function reload(room,p) {
   return true;
 }
 export function useSkill(room,p) {
-  if(room.phase!=='combat'||p.dead||p.downed||room.clock<p.skillReadyAt)return;
+  if(room.phase!=='combat'||p.dead||p.downed||room.clock<p.skillReadyAt||room.docket?.holderId===p.id)return;
   if(p.encounterMetrics)p.encounterMetrics.skillUses++;
   const skill=classes[p.classId];
   p.skillReadyAt=room.clock+skill.cooldown*Math.pow(.82,p.upgrades.capacitor||0);
@@ -1130,7 +1196,7 @@ export function useSkill(room,p) {
   for(const q of room.players.values())send(q.ws,{type:'skill',id:p.id,classId:p.classId,x:p.x,y:p.y});
 }
 export function activateDash(room,p){
-  if(room.phase!=='combat'||p.dead||p.downed||room.clock-p.lastDash<2.7)return false;
+  if(room.phase!=='combat'||p.dead||p.downed||room.clock-p.lastDash<2.7||room.docket?.holderId===p.id)return false;
   p.lastDash=room.clock;p.dashUntil=room.clock+.25;
   if(p.grafts?.includes('phaseCoupler'))p.phaseCharges=3;
   if(p.grafts?.includes('kineticRig')){
@@ -1243,11 +1309,12 @@ function handleMessage(ws, raw) {
     if (!Number.isFinite(x) || !Number.isFinite(y) || !Number.isFinite(a)) return;
     const elapsed = clamp(room.clock-p.lastMove,.02,.25);
     const maxStep = (p.speed * (room.clock < p.dashUntil ? 15 : 5.8) * elapsed + .35);
-    if (!p.dead&&!p.downed&&Math.hypot(x-p.x,y-p.y) <= maxStep && free(x,y,.24,room.grid)) { p.moveSpeed=Math.hypot(x-p.x,y-p.y)/elapsed;p.x=x; p.y=y; }
+    if (!p.dead&&!p.downed&&room.docket?.holderId!==p.id&&Math.hypot(x-p.x,y-p.y) <= maxStep && free(x,y,.24,room.grid)) { p.moveSpeed=Math.hypot(x-p.x,y-p.y)/elapsed;p.x=x; p.y=y; }
     p.a=a; p.lastMove=room.clock;
   }
   if (msg.type === 'fire') fire(room,p,msg.a,msg.pitch,msg.height);
   if (msg.type === 'ping') placePing(room,p,msg);
+  if (msg.type === 'docketHold') requestRecoveryHold(room,p,!!msg.holding);
   if (msg.type === 'revive') requestRevive(room,p,msg.targetId);
   if (msg.type === 'dash') activateDash(room,p);
   if (msg.type === 'reload') reload(room,p);
@@ -1299,6 +1366,7 @@ export function updateRoom(room,dt) {
   if(!room.players.size)return;
   if (room.phase === 'combat') {
     const damageBatches=new Map();
+    updateRecoveryDocket(room);
     for(const p of room.players.values())if(p.slotHeat){
       p.slotVentUntil||=[0,0];
       for(let slot=0;slot<2;slot++){
@@ -1488,6 +1556,7 @@ export function updateRoom(room,dt) {
     } else if (room.spawnLeft<=0 && room.enemies.length===0) {
       room.projectiles.length=0;
       for(const m of room.machines||[])m.session=null;
+      if(room.docket?.state==='available'){room.docket.state='unrecovered';room.docket.holderId=null;room.docket.startedAt=0;}
       settleWorkOrder(room);
       buildEncounterReport(room);
       room.phase='intermission'; room.timer=room.intermissionSeconds||60;

@@ -6,7 +6,7 @@ A playable 3D first person co-op roguelite shooter. Fight through three hostile 
 
 Download and extract the [v0.22.0 Windows ZIP](https://github.com/lonewolf4death/blacksite-shift/releases/download/v0.22.0/BLACKSITE.SHIFT.v0.22.0.Windows.zip), then open `BLACKSITE SHIFT-win32-x64/BLACKSITE SHIFT.exe` inside the extracted folder. Keep that complete folder together; the executable needs its bundled runtime and game files. It starts its own multiplayer server, so Node.js and a separate browser are unnecessary. If a previous launch is still open, close it before starting the extracted copy.
 
-The source tree is at **v0.23.0**. The linked v0.22.0 ZIP is the latest published release; build the source locally for the new content until a newer ZIP is published.
+The source tree is at **v0.24.0**. The linked v0.22.0 ZIP is the latest published release; build the source locally for the new content until a newer ZIP is published.
 
 For solo play, select **Solo Run**. To host co-op, select **Create Squad** and share the room code plus your computer's LAN IP address with your friends. They can run their own copy of the same version of the executable, enter the room code and your IP address with port `3000` in **Host IP:Port**, then select **Join Squad**. Your firewall may need to allow the game on private networks. Internet play requires a reachable host or port forwarding; there is no matchmaking yet.
 
@@ -70,6 +70,8 @@ Click the game view to lock the cursor after a run starts.
 - Threat director limits simultaneous major attack windups and active enemies by squad size; reinforcements prefer positions outside the crew's line of sight, route around cover, and show a spawn effect
 - Visible encounter pressure at 30 and 60 seconds adds one bounded reinforcement per step; the HUD counts down to the next step, and the clock pauses in the service room
 - A shared salvage quota from kills grants each crew member one personal augment-offer reroll after the clear; loot picks remain independent
+- On waves 2, 5, and 8, one optional tagged recovery docket gives the crew a short cover-and-retrieve decision during combat. Securing it reveals the next boss work order before the Overtime vote and grants each participating survivor one personal reroll if the kill quota was missed; the two sources never stack above one reroll per player.
+- Server-owned recovery progress requires a 2.5-second F hold while facing the record within 1.6 m. Damage, release, departure, or loss of the angle cancels it; the player cannot move or shoot during the hold. Unrecovered records add no cleanup phase or penalty.
 - Optional precision reload: press R again during the highlighted window to shorten the remaining reload and charge the next shot for 20% more damage; a near-reticle cue shows the timing without making you look away from enemies
 - Automatic co-op reconnection after a brief network interruption: the live host reserves the operative's identity, class, equipment, and run build for 60 seconds; teammates see the reconnect countdown
 - Clear windups for sniper shots, charger rushes, Brute slams, sapper blasts, welder cutting lanes, purger frost pulses, and three warned boss attacks; boss health, hazard warnings, and wave intros in the HUD
@@ -79,6 +81,7 @@ Click the game view to lock the cursor after a run starts.
 - After each clear, an encounter report shows personal damage, kills, skill use, revives, machine actions, reactions, and crew contributions before the next choice
 - Five boss grafts with visible suit parts: Arc Spine charges chain shots after a class skill, Kinetic Rig turns a dash into a shockwave, Reclaimer Core repairs nearby crew after kills, Phase Coupler turns a dash into angle-control shots, and Siphon Halo trades a charged round for a close pulse and skill recovery on precision reload
 - More decisive class skills on longer cooldowns: Vanguard draws fire under 75% protection, Breacher interrupts and displaces a group, Runner refills and resets dash while Overclocked, and Medic heals or revives nearby crew
+- Toggle Sprint joins the sensitivity, FOV, view-bob, and visual intensity settings for a more comfortable movement setup
 - Every wave entry chooses validated, separated crew positions and the client snaps its predicted position to that entry, including sector changes; the entry brief names the selected bay and machine station setup
 - In-game field manual catalogs thirteen weapons, elemental reactions, 40 augments, 24 talents, five grafts, four skills, and thirteen hostile types
 - Host-selected 30, 60, or 120 second service decision window with clear automatic departure and a two-second early countdown once all living crew have selected and voted

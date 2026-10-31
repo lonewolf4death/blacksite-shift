@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { spawn } from 'node:child_process';
 import { BUILD_VERSION, bayNames, classes, weapons, weaponNotes, enemyIntel, enemyStats, upgrades, stages, talents, grafts, encounterOrders, workOrders, floorHeightAt } from '../public/shared.js';
-import { dealDamage, chooseOptions, rerollAugments, selectEncounterOrder, selectOvertimeProtocol, selectWorkOrder, findSafeCrewSpawns, advanceProjectile, startWave, spawnEnemy, expireDisconnectedPlayers, configureIntermission, configureRunSeed, applyWeapon, applyTalent, applyUpgrade, applyGraft, activateDash, activateMachine, requestMachineHold, startMachineSession, machineInput, settleWorkOrder, buildEncounterReport, fire, reload, useSkill, placePing, requestRevive, castOvertimeVote, resolveOvertimeVote, updateRoom } from '../server.js';
+import { dealDamage, chooseOptions, rerollAugments, selectEncounterOrder, selectOvertimeProtocol, selectWorkOrder, findSafeCrewSpawns, advanceProjectile, startWave, spawnEnemy, expireDisconnectedPlayers, configureIntermission, configureRunSeed, applyWeapon, applyTalent, applyUpgrade, applyGraft, activateDash, activateMachine, requestMachineHold, requestRecoveryHold, startMachineSession, machineInput, settleWorkOrder, buildEncounterReport, fire, reload, useSkill, placePing, requestRevive, castOvertimeVote, resolveOvertimeVote, updateRoom } from '../server.js';
 
 test('pulse bolts pierce two targets and a ricochet reverses a wall impact', () => {
   const player={id:'p',ws:{send(){}},classId:'medic',upgrades:{},damageDealt:0,damageHistory:[],hits:0,kills:0,leech:0};
@@ -769,6 +769,60 @@ test('authored bays offer three easy stations, two circuit stations, or one hard
     assert.ok(room.grid.flat().includes(2),'the bay has low cover');
     assert.ok(room.grid.flat().includes(3),'the bay has a raised deck');
   }
+});
+
+test('recovery docket is seeded, reachable, and clear of worksite hazards in each sector', () => {
+  for(const wave of [2,5,8])for(let seed=1;seed<=28;seed++){
+    const run=()=>{
+      const p={id:'p',name:'OPERATOR',classId:'vanguard',x:12.5,y:12.5,hp:100,maxHp:100,dead:false,downed:false,disconnected:false,
+        upgrades:{},talents:{},ws:{send(){}}};
+      const room={phase:'intermission',clock:1,wave:wave-1,runSeed:seed,players:new Map([['p',p]]),enemies:[],projectiles:[],drops:[],feed:[],seq:1};
+      startWave(room);return room;
+    };
+    const room=run(),d=room.docket;
+    assert.ok(d,`wave ${wave} seed ${seed} must have a docket`);
+    assert.deepEqual([d.x,d.y],[run().docket.x,run().docket.y],'same seed must reproduce the site');
+    assert.ok(room.grid[Math.floor(d.y)][Math.floor(d.x)]!==1&&room.grid[Math.floor(d.y)][Math.floor(d.x)]!==2);
+    assert.ok(room.machines.every(m=>Math.hypot(d.x-m.targetX,d.y-m.targetY)>=m.radius+.85));
+    assert.ok(Math.hypot(d.x-room.players.get('p').x,d.y-room.players.get('p').y)>=5);
+  }
+});
+
+test('recovery requires a continuous exposed hold and pays one shared reroll backstop', () => {
+  const {room,p}=encounterWithVariant(0),d=room.docket;
+  assert.ok(d);
+  room.spawnLeft=1;room.spawnTimer=999;room.snapshotTimer=999;
+  assert.equal(requestRecoveryHold(room,p,true),false,'remote pickup is refused');
+  p.x=d.x-.2;p.y=d.y;p.a=0;
+  const guard={...p,id:'guard',name:'GUARD',x:d.x-.25,encounterMetrics:{dockets:0}};
+  room.players.set(guard.id,guard);
+  assert.equal(requestRecoveryHold(room,p,true),true);
+  assert.equal(requestRecoveryHold(room,guard,true),false,'another crew member cannot steal the hold');
+  const shots=room.projectiles.length;fire(room,p,0);assert.equal(room.projectiles.length,shots,'operator cannot fire');
+  assert.equal(activateDash(room,p),false,'operator cannot dash');
+  updateRoom(room,1.1);assert.equal(d.state,'available');
+  assert.equal(requestRecoveryHold(room,p,false),true);
+  updateRoom(room,1.5);assert.equal(d.state,'available','release must erase progress');
+  assert.equal(requestRecoveryHold(room,p,true),true);
+  p.a=Math.PI;updateRoom(room,.1);
+  assert.equal(d.holderId,null,'turning away interrupts recovery');
+  p.a=0;
+  assert.equal(requestRecoveryHold(room,p,true),true);
+  updateRoom(room,2.55);
+  assert.equal(d.state,'secured');assert.equal(d.securedBy,p.name);
+  assert.equal(requestRecoveryHold(room,p,true),false,'docket can only pay once');
+  room.salvageEarned=false;room.phase='intermission';chooseOptions(room,p);
+  chooseOptions(room,guard);
+  assert.equal(p.rerolls,1,'secured docket pays a reroll when kill quota misses');
+  assert.equal(guard.rerolls,1,'the entire surviving crew receives the backstop');
+  room.salvageEarned=true;chooseOptions(room,p);
+  assert.equal(p.rerolls,1,'salvage and recovery never stack above one reroll');
+  const late={...guard,id:'late',name:'LATE ARRIVAL',encounterWave:room.wave+1};
+  chooseOptions(room,late,true);
+  assert.equal(late.rerolls,0,'an intermission arrival cannot claim the previous crew recovery');
+  assert.equal(late.augmentPicksRemaining,1,'an intermission arrival receives no prior-encounter bonus');
+  const report=buildEncounterReport(room);
+  assert.equal(report.docket.secured,true);assert.equal(report.crew[0].dockets,1);
 });
 
 test('every named bay admits four separated crew and reachable clear-floor controls', () => {
