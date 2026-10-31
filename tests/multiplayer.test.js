@@ -1142,4 +1142,3 @@ test('four classes share combat, report damage, reload indefinitely, and spawn c
     server.kill();
   }
 });
-

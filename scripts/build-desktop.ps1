@@ -45,4 +45,3 @@ if (Test-Path -LiteralPath $reporter) { Rename-Item -LiteralPath $reporter -NewN
 
 $exe = Join-Path $targetDir 'BLACKSITE SHIFT.exe'
 Write-Host "Built $exe"
-

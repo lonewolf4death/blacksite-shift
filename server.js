@@ -1508,4 +1508,3 @@ if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.me
   startServer().then(port => console.log(`BLACKSITE SHIFT ready at http://localhost:${port}`))
     .catch(error => { console.error(error); process.exitCode = 1; });
 }
-

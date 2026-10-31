@@ -708,4 +708,3 @@ function loop(time){
   view.render();requestAnimationFrame(loop);
 }
 requestAnimationFrame(loop);
-

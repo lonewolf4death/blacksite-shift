@@ -195,4 +195,3 @@ export const upgrades = [
   { id:'overclockPlus', name:'ADRENAL LOOP', detail:'Kills during Overclock extend it by 1 second.', kind:'CLASS', rarity:'SIGNATURE', classId:'runner', icon:'⌁' },
   { id:'rallyPlus', name:'FIELD SURGE', detail:'Rally Pulse restores 20 extra health and completes nearby allies’ reloads.', kind:'CLASS', rarity:'SIGNATURE', classId:'medic', icon:'✚' }
 ];
-

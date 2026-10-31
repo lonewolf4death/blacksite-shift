@@ -62,4 +62,3 @@
 .weapon-choice .card-icon{font-size:45px}.weapon-choice p{line-height:1.35}.room-block #manual-hud{margin-top:1px}
 .room-block #settings-hud{display:none}
 @media(max-width:700px){.manual-panel{width:100vw;height:100vh}.manual-nav button{font-size:8px}.manual-content{padding:16px}.manual-card{grid-template-columns:1fr;gap:5px;padding:10px 0}.manual-foot{font-size:8px}.room-block #manual-hud{display:none}}
-

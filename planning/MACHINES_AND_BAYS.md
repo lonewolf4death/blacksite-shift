@@ -32,4 +32,3 @@ The new geometry is intended to create a reason to move: fire over a half wall, 
 6. An early failure still permits the squad to win the wave, and no minigame can silently bypass the Overtime vote or overwrite personal loot decisions.
 
 Automated tests verify station counts and positions, deliberate valve input and timing, refusal of blind circuit and pressure commits, low-shot cover behavior, deck height, deterministic layouts, four-player entries, and multiplayer flow. Manual feel and readability should be evaluated with human play sessions before release balancing.
-

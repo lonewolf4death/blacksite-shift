@@ -17,4 +17,3 @@
 @media(max-width:700px){.boss-bar{top:82px;width:55vw}.boss-bar span{max-width:75px;overflow:hidden;text-overflow:ellipsis}.wave-intro strong{font-size:42px}}
 .hitmarker.armored{color:#a6dce5;text-shadow:0 0 14px #5c9daf}.hitmarker.marked{color:#f8d79b;text-shadow:0 0 14px #d6a758}.hitmarker.critical{color:#ffad73;text-shadow:0 0 14px #f76642}
 .hitmarker.staggered{color:#ffd394;text-shadow:0 0 16px #ee9f53;transform:translate(-50%,-50%) scale(1.2)}
-
