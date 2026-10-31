@@ -1,0 +1,12 @@
+{
+  "name": "blacksite-shift",
+  "version": "0.22.0",
+  "private": true,
+  "type": "module",
+  "main": "desktop.js",
+  "scripts": {
+    "start": "node server.js",
+    "test": "node --test"
+  },
+  "engines": { "node": ">=20" }
+}
