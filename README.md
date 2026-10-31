@@ -4,7 +4,7 @@ A playable 3D first person co-op roguelite shooter. Fight through three hostile 
 
 ## Play on Windows
 
-Extract [`dist/BLACKSITE SHIFT v0.22.0 Windows.zip`](<dist/BLACKSITE SHIFT v0.22.0 Windows.zip>), then open `BLACKSITE SHIFT-win32-x64/BLACKSITE SHIFT.exe` inside the extracted folder. Keep that complete folder together; the executable needs its bundled runtime and game files. It starts its own multiplayer server, so Node.js and a separate browser are unnecessary. If a previous launch is still open, close it before starting the extracted copy.
+Download and extract the [v0.22.0 Windows ZIP](https://github.com/lonewolf4death/blacksite-shift/releases/download/v0.22.0/BLACKSITE.SHIFT.v0.22.0.Windows.zip), then open `BLACKSITE SHIFT-win32-x64/BLACKSITE SHIFT.exe` inside the extracted folder. Keep that complete folder together; the executable needs its bundled runtime and game files. It starts its own multiplayer server, so Node.js and a separate browser are unnecessary. If a previous launch is still open, close it before starting the extracted copy.
 
 For solo play, select **Solo Run**. To host co-op, select **Create Squad** and share the room code plus your computer's LAN IP address with your friends. They can run their own copy of the same version of the executable, enter the room code and your IP address with port `3000` in **Host IP:Port**, then select **Join Squad**. Your firewall may need to allow the game on private networks. Internet play requires a reachable host or port forwarding; there is no matchmaking yet.
 
@@ -78,7 +78,7 @@ Click the game view to lock the cursor after a run starts.
 - In-game field manual catalogs twelve weapons, elemental reactions, 37 augments, 24 talents, five grafts, four skills, and thirteen hostile types
 - Host-selected 30, 60, or 120 second service decision window with clear automatic departure and a two-second early countdown once all living crew have selected and voted
 
-See [GAME_GUIDE.md](GAME_GUIDE.md) for the content roster, [planning/MACHINES_AND_BAYS.md](planning/MACHINES_AND_BAYS.md) for the new controls and geometry, and [planning/REFERENCE_DEVELOPMENT.md](planning/REFERENCE_DEVELOPMENT.md) for source-by-source research and acceptance checks.
+See [GAME_GUIDE.md](GAME_GUIDE.md) for the content roster, [planning/MACHINES_AND_BAYS.md](planning/MACHINES_AND_BAYS.md) for the new controls and geometry, [planning/REFERENCE_DEVELOPMENT.md](planning/REFERENCE_DEVELOPMENT.md) for source-by-source research and acceptance checks, and the original [BLACKSITE SHIFT research and production plan](planning/PRODUCTION_PLAN.md).
 
 This is still a prototype. It has no persistence or matchmaking, and the multiplayer protocol is meant for trusted play sessions rather than public deployment.
 
