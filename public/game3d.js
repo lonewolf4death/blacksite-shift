@@ -3,7 +3,7 @@ import { BUILD_VERSION, classes, weapons, weaponNotes, enemyIntel, enemyStats, u
 
 const $=id=>document.getElementById(id);
 const canvas=$('game');
-const defaults={sensitivity:.8,adsSensitivity:65,fov:82,volume:70,quality:85,shake:70,bob:70,invert:false,reducedFlashes:false};
+const defaults={sensitivity:.8,adsSensitivity:65,fov:82,volume:70,quality:85,shake:70,bob:70,allyProjectiles:65,invert:false,reducedFlashes:false};
 let settings={...defaults};
 try{settings={...settings,...JSON.parse(localStorage.getItem('blacksite-settings')||'{}')};}catch{}
 document.documentElement.classList.toggle('reduce-flashes',!!settings.reducedFlashes);
@@ -129,7 +129,7 @@ function waveIntro(kicker,title,detail,configuration=''){
   const panel=$('wave-intro');panel.classList.add('show');clearTimeout(introTimer);introTimer=setTimeout(()=>panel.classList.remove('show'),2600);
 }
 function loadSettingsUI(){
-  const fields=[['sensitivity',v=>Number(v).toFixed(2)],['adsSensitivity',v=>`${v}%`],['fov',v=>`${v}°`],['volume',v=>`${v}%`],['quality',v=>`${v}%`],['shake',v=>`${v}%`],['bob',v=>`${v}%`]];
+  const fields=[['sensitivity',v=>Number(v).toFixed(2)],['adsSensitivity',v=>`${v}%`],['fov',v=>`${v}°`],['volume',v=>`${v}%`],['quality',v=>`${v}%`],['shake',v=>`${v}%`],['bob',v=>`${v}%`],['allyProjectiles',v=>`${v}%`]];
   for(const [key,format] of fields){
     const input=$('setting-'+key),output=$('value-'+key);
     input.value=settings[key];output.value=format(settings[key]);

@@ -84,7 +84,7 @@ The four release pillars are **tactile guns, visible adaptation, shared industri
 
 **Original response:** Four suits fill readable roles: Vanguard holds a lane, Breacher creates a close-range opening, Runner changes tempo, Medic sustains the group. A starter weapon and active skill define each role before augments. Talent branches reinforce different uses of the skill; drafts should present a mix of class-specific, behavior-changing and simple reliability choices. Armory weapons can change a run's attack pattern without erasing the suit's contribution.
 
-**Current implementation:** four classes and starters, distinct active skills, three talent branches per class, random armory offers, and class signature augments. **Next depth pass:** audit each branch for a decision change; merge redundant percentage nodes into fewer, stronger choices. Improve class-select examples to show what an ability can save or create in a co-op situation.
+**Current implementation:** four classes and starters, distinct active skills, three talent branches per class, random armory offers, and class signature augments. The official-source audit, class/weapon/build-layer rules, proposed variants, room contracts, Overtime extensions and playtest gates are in [GUNFIRE_REBORN_DEEP_DIVE.md](GUNFIRE_REBORN_DEEP_DIVE.md). **Next depth pass:** audit each branch for a decision change; merge redundant percentage nodes into fewer, stronger choices. Test class roles without signatures and two different builds on the same suit.
 
 **Acceptance:** Without reading names, teammates identify each suit's role from one encounter. Two players of the same class can describe different build plans and carry them out.
 
@@ -94,7 +94,7 @@ The four release pillars are **tactile guns, visible adaptation, shared industri
 
 **Original response:** Each room clear gives a personal draft, boss clears give a major graft, and successful Overtime gives an extra draft. Early offers should let a player feel a tactical shift in the next encounter. Keep mandatory menus between battles so upgrades never steal the cursor during fire. Set a maximum for simultaneous extra projectiles, particles and sound voices; growth is allowed only while the danger grammar survives.
 
-**Current implementation:** normal and bonus drafts, rarity, boss grafts, intermission selection. **Next depth pass:** instrument time between decisions and flag any stretch with no changed behavior. Add a concise result panel showing the one or two interactions that did the work, rather than a flood of stat totals.
+**Current implementation:** normal and bonus drafts, rarity, boss grafts, intermission selection, and a local 25–100% ally projectile visibility setting that preserves enemy warnings and hit rules. The source audit, proposed combination grammar, height/cover bays, effect budgets, work certifications and acceptance gates are in [MEGABONK_DEEP_DIVE.md](MEGABONK_DEEP_DIVE.md). **Next depth pass:** instrument time between decisions and flag any stretch with no changed behavior. Add a concise result panel showing the one or two interactions that did the work, rather than a flood of stat totals.
 
 **Acceptance:** A player can tell what changed after each of the first three rewards. The strongest four-player combination still shows a sniper lock, charge lane and machine warning without effects masking them.
 

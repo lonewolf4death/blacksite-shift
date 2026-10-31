@@ -332,6 +332,18 @@ function makeProjectile(kind,charged=false,phase=false){
   tail.rotation.x=Math.PI/2;tail.position.z=trailLength*.47;g.add(tail);
   return g;
 }
+function setProjectileVisibility(obj,scale){
+  if(obj.userData.visibilityScale===scale)return;
+  obj.userData.visibilityScale=scale;
+  obj.traverse(part=>{
+    if(!part.isMesh)return;
+    const material=part.material;
+    material.userData.baseOpacity??=material.opacity;
+    material.transparent=scale<1||material.userData.baseOpacity<1;
+    material.opacity=material.userData.baseOpacity*scale;
+    material.needsUpdate=true;
+  });
+}
 function floorTexture(stageIndex=0) {
   const canvas=document.createElement('canvas');canvas.width=128;canvas.height=128;
   const c=canvas.getContext('2d'),bases=['#45443d','#374a50','#493e42'];
@@ -787,6 +799,7 @@ export class GameScene {
       activeProjectiles.add(b.id);
       let obj=this.projectiles.get(b.id);
       if(!obj){obj=makeProjectile(b.kind,b.arcCharged,b.phaseCharged);this.scene.add(obj);this.projectiles.set(b.id,obj);}
+      setProjectileVisibility(obj,b.side==='player'&&b.ownerId!==myId?Math.max(.25,Math.min(1,Number(this.settings.allyProjectiles)/100||1)):1);
       obj.position.set(b.x+b.vx*age,b.h+b.vh*age,b.y+b.vy*age);
       const dir=new T.Vector3(b.vx,b.vh,b.vy).normalize();
       obj.quaternion.setFromUnitVectors(new T.Vector3(0,0,-1),dir);

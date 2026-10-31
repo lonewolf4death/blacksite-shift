@@ -1,4 +1,4 @@
-export const BUILD_VERSION = '0.22.0';
+export const BUILD_VERSION = '0.22.1';
 
 // Tile 3 is a low, walkable equipment deck. Its outer half-tile slopes up so
 // movement, camera height, and the rendered surface agree at every edge.
