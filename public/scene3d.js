@@ -166,11 +166,40 @@ function makeEnemy(type) {
 function makePlayer(name,classId) {
   const colors={vanguard:0x9ca88f,breacher:0xbc855e,runner:0x66ae9d,medic:0x9695ba};
   const g = new T.Group(), suit=mat(colors[classId]||0x9ca88f),dark=mat(0x28342d);
+  const hardware=mat(0x56645b,{metalness:.62,roughness:.5}),reflector=mat(0xd9bd70,{emissive:0x8a6d30,emissiveIntensity:.28}),lens=mat(0xb8e1c9,{emissive:0x88b7a4,emissiveIntensity:.65});
   box(g,[.22,.62,.23],[-.19,.35,0],dark);box(g,[.22,.62,.23],[.19,.35,0],dark);
   box(g,[.73,.77,.42],[0,1.12,0],suit);
   box(g,[.44,.41,.4],[0,1.7,.03],dark);
   box(g,[.38,.08,.04],[0,1.74,.25],mat(0xd6ec53,{emissive:0xd6ec53,emissiveIntensity:2}));
   box(g,[.16,.65,.17],[-.44,1.06,0],dark);box(g,[.16,.65,.17],[.44,1.06,0],dark);
+  // Every suit carries the same maintenance kit; class silhouettes remain readable through the armor.
+  for(const side of [-1,1]){
+    box(g,[.1,.56,.055],[side*.26,1.13,.245],dark);
+    box(g,[.13,.07,.075],[side*.4,1.28,.09],reflector);
+    box(g,[.2,.21,.15],[side*.29,.78,-.04],hardware);
+    box(g,[.23,.13,.29],[side*.19,.11,.005],hardware);
+  }
+  box(g,[.57,.1,.08],[0,.85,.235],dark);
+  box(g,[.24,.13,.04],[0,1.28,.245],reflector);
+  box(g,[.56,.6,.18],[0,1.13,-.35],hardware); // air filter and tool battery
+  box(g,[.44,.08,.2],[0,1.47,-.36],dark);
+  for(const side of [-1,1]){
+    const cartridge=new T.Mesh(new T.CylinderGeometry(.09,.09,.42,8),hardware);
+    cartridge.position.set(side*.19,1.08,-.49);g.add(cartridge);
+  }
+  box(g,[.15,.22,.1],[.39,1.64,-.12],hardware); // shoulder radio
+  box(g,[.025,.34,.025],[.39,1.93,-.12],dark);
+  box(g,[.08,.045,.04],[-.19,1.83,.23],lens); // helmet task lamp
+  if(classId==='vanguard'){
+    for(const side of [-1,1])box(g,[.28,.2,.3],[side*.43,1.42,-.01],hardware);
+  }else if(classId==='breacher'){
+    box(g,[.36,.18,.13],[0,1.12,.28],hardware);
+    box(g,[.1,.31,.1],[-.51,.95,.02],reflector);
+  }else if(classId==='runner'){
+    for(const side of [-1,1])box(g,[.09,.35,.1],[side*.4,.81,-.13],suit);
+  }else if(classId==='medic'){
+    for(const side of [-1,1])box(g,[.11,.28,.08],[side*.4,1.05,-.15],lens);
+  }
   const arc=new T.Group(),kinetic=new T.Group(),reclaimer=new T.Group(),phase=new T.Group(),siphon=new T.Group();
   const arcMat=mat(0x83d8f5,{emissive:0x49aee6,emissiveIntensity:2});
   for(const side of [-1,1]){box(arc,[.09,.72,.11],[side*.29,1.16,-.28],arcMat);box(arc,[.14,.12,.2],[side*.29,1.55,-.28],arcMat);}
