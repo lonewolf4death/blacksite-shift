@@ -297,7 +297,10 @@ function weaponModel(kind) {
     rotor.rotation.y=kind==='saw'?0:Math.PI/2;g.add(rotor);g.userData.rotor=rotor;
   }
   if(['arcgun','cryo','pulse','gravity'].includes(kind))g.userData.coil=accent;
-  const flash=new T.Mesh(new T.ConeGeometry(.15,.48,6),new T.MeshBasicMaterial({color:0xffe39a,transparent:true,opacity:.93,depthWrite:false}));
+  // Give each chassis an immediate shot signature without persistent lights or particles.
+  const flashColors={scatter:0xffb77a,smg:0x9af3cf,pulse:0xc5baff,rail:0xfff0cc,launcher:0xffa06b,arcgun:0x9eeaff,cryo:0xc4f5ff,saw:0xf2dfac,harpoon:0xffd49c,gravity:0xb0cfff};
+  const heavyFlash=kind==='launcher'||kind==='gravity',wideFlash=kind==='scatter',slimFlash=kind==='rail'||kind==='harpoon';
+  const flash=new T.Mesh(new T.ConeGeometry(wideFlash?.23:slimFlash?.09:heavyFlash?.19:.14,slimFlash?.64:heavyFlash?.38:.48,6),new T.MeshBasicMaterial({color:flashColors[kind]||0xffe39a,transparent:true,opacity:.86,depthWrite:false}));
   flash.rotation.x=-Math.PI/2;flash.position.set(0,.04,kind==='scatter'?-1.03:kind==='smg'?-1.01:-1.24);flash.visible=false;g.add(flash);
   g.userData.flash=flash;g.userData.spin=0;return g;
 }

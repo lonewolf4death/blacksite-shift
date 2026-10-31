@@ -78,7 +78,7 @@ Click the game view to lock the cursor after a run starts.
 - In-game field manual catalogs twelve weapons, elemental reactions, 37 augments, 24 talents, five grafts, four skills, and thirteen hostile types
 - Host-selected 30, 60, or 120 second service decision window with clear automatic departure and a two-second early countdown once all living crew have selected and voted
 
-See [GAME_GUIDE.md](GAME_GUIDE.md) for the content roster, [planning/MACHINES_AND_BAYS.md](planning/MACHINES_AND_BAYS.md) for the new controls and geometry, [planning/REFERENCE_DEVELOPMENT.md](planning/REFERENCE_DEVELOPMENT.md) for source-by-source research, the [Lethal Company deep dive](planning/LETHAL_COMPANY_DEEP_DIVE.md) for co-op design decisions, and the original [BLACKSITE SHIFT research and production plan](planning/PRODUCTION_PLAN.md).
+See [GAME_GUIDE.md](GAME_GUIDE.md) for the content roster, [planning/MACHINES_AND_BAYS.md](planning/MACHINES_AND_BAYS.md) for the new controls and geometry, [planning/REFERENCE_DEVELOPMENT.md](planning/REFERENCE_DEVELOPMENT.md) for source-by-source research, the [Lethal Company deep dive](planning/LETHAL_COMPANY_DEEP_DIVE.md) for co-op design decisions, the [Deadzone: Rogue deep dive](planning/DEADZONE_ROGUE_DEEP_DIVE.md) for gun feel, elements and encounter design, and the original [BLACKSITE SHIFT research and production plan](planning/PRODUCTION_PLAN.md).
 
 This is still a prototype. It has no persistence or matchmaking, and the multiplayer protocol is meant for trusted play sessions rather than public deployment.
 
