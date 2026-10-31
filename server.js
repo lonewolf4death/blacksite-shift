@@ -1402,9 +1402,11 @@ export function updateRoom(room,dt) {
     updateRevives(room,dt);
     if ([...room.players.values()].every(p=>p.dead)) {
       room.projectiles.length=0;
+      for(const m of room.machines||[])m.session=null;
       room.phase='gameover'; announce(room,'ALL SIGNALS LOST // RUN TERMINATED');
     } else if (room.spawnLeft<=0 && room.enemies.length===0) {
       room.projectiles.length=0;
+      for(const m of room.machines||[])m.session=null;
       settleWorkOrder(room);
       room.phase='intermission'; room.timer=room.intermissionSeconds||60;
       for (const p of room.players.values()) if (!p.dead){
@@ -1506,3 +1508,4 @@ if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.me
   startServer().then(port => console.log(`BLACKSITE SHIFT ready at http://localhost:${port}`))
     .catch(error => { console.error(error); process.exitCode = 1; });
 }
+
