@@ -123,8 +123,9 @@ function weaponSound(kind,scale=1){
     }
   }catch{}
 }
-function waveIntro(kicker,title,detail){
+function waveIntro(kicker,title,detail,configuration=''){
   $('intro-kicker').textContent=kicker;$('intro-title').textContent=title;$('intro-detail').textContent=detail;
+  $('intro-configuration').textContent=configuration;
   const panel=$('wave-intro');panel.classList.add('show');clearTimeout(introTimer);introTimer=setTimeout(()=>panel.classList.remove('show'),2600);
 }
 function loadSettingsUI(){
@@ -385,7 +386,8 @@ function updateUI(){
   $('wave-label').textContent=`WAVE ${String(state.wave||1).padStart(2,'0')}`;
   $('threat-label').textContent=state.phase==='combat'?`${state.wave%3===0?'BOSS / ':'HOSTILES '}${String(state.enemies.length+state.spawnLeft).padStart(2,'0')}`:state.phase==='intermission'?'BREACH CONTAINED':'AWAITING ORDERS';
   $('pressure-hud').classList.toggle('hidden',state.phase!=='combat');
-  $('pressure-hud').textContent=`PRESSURE ${state.pressureBand||0}/2 · ${state.encounterSeconds||0}S`;
+  const pressureBand=state.pressureBand||0,seconds=state.encounterSeconds||0;
+  $('pressure-hud').textContent=pressureBand<2?`PRESSURE ${pressureBand}/2 · NEXT +1 IN ${Math.max(0,(pressureBand?60:30)-seconds)}S`:'PRESSURE 2/2 · REINFORCEMENTS MAXED';
   $('salvage-hud').classList.toggle('hidden',state.phase!=='combat');
   $('salvage-hud').textContent=state.salvage?.earned?'SALVAGE QUOTA MET · REROLL EARNED':`SALVAGE ${state.salvage?.count||0}/${state.salvage?.target||0}`;
   const order=state.workOrder,account=state.contract;
@@ -520,8 +522,12 @@ function updateUI(){
     if(document.pointerLockElement)document.exitPointerLock();
   }else{$('upgrade').classList.add('hidden');$('reroll-button').classList.add('hidden');activeCards='';selectionTab='augment';}
   if(state.phase!==lastPhase){
-    if(state.phase==='combat')waveIntro(state.wave%3===0?`BOSS SIGNAL // WAVE ${String(state.wave).padStart(2,'0')}`:`SECTOR 0${state.stageIndex+1} // WAVE ${String(state.wave).padStart(2,'0')}`,
-      state.wave%3===0?stages[state.stageIndex].bossName:stages[state.stageIndex].name,state.overtime?.active?'OVERTIME ENGAGED // BONUS DRAFT ON CLEAR':state.order?`BAY ${'ABCDE'[state.layoutId%5]} · ${state.order.name} // ${state.order.detail}`:stages[state.stageIndex].subtitle);
+    if(state.phase==='combat'){
+      const stationCount=state.machines?.length||0,stationMode=state.machines?.[0]?.modeName||'CONTROL';
+      waveIntro(state.wave%3===0?`BOSS SIGNAL // WAVE ${String(state.wave).padStart(2,'0')}`:`SECTOR 0${state.stageIndex+1} // WAVE ${String(state.wave).padStart(2,'0')}`,
+        state.wave%3===0?stages[state.stageIndex].bossName:stages[state.stageIndex].name,state.overtime?.active?'OVERTIME ENGAGED // BONUS DRAFT ON CLEAR':state.order?`${state.order.name} // ${state.order.detail}`:stages[state.stageIndex].subtitle,
+        `BAY ${'ABCDE'[state.layoutId%5]} · ${stationCount} ${stationMode} STATION${stationCount===1?'':'S'}`);
+    }
     lastPhase=state.phase;
   }
   const nearby=state.phase==='combat'&&!p.dead&&!p.downed?state.players.find(q=>q.downed&&Math.hypot(q.x-p.x,q.y-p.y)<1.8):null;

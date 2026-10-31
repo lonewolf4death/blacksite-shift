@@ -16,7 +16,7 @@ Requires Node.js 20 or newer. No package install is needed because the 3D librar
 node server.js
 ```
 
-Open **http://127.0.0.1:3000** in a desktop browser. You can also build the Windows executable again with `./scripts/build-desktop.ps1`. The build script downloads and verifies Electron's official Windows runtime, then packages the game in `dist/`.
+Open **http://127.0.0.1:3000** in a desktop browser. You can also build the Windows executable again with `./scripts/build-desktop.ps1`. If the current executable is running, use `./scripts/build-desktop.ps1 -OutputName 'BLACKSITE SHIFT-dev-win32-x64'` to build a separate copy. The build script downloads and verifies Electron's official Windows runtime, then packages the game in `dist/`.
 
 ## Controls
 
@@ -64,7 +64,7 @@ Click the game view to lock the cursor after a run starts.
 - Server validated squad pings that appear in the 3D arena, with teammate selection and vote status visible between waves and a clear error for mismatched builds
 - Host controlled downed and revive flow: hold V near a fallen teammate, or use one emergency self reboot if no one else is standing
 - Threat director limits simultaneous major attack windups and active enemies by squad size; reinforcements prefer positions outside the crew's line of sight, route around cover, and show a spawn effect
-- Visible encounter pressure at 30 and 60 seconds adds one bounded reinforcement per step; the clock pauses in the service room
+- Visible encounter pressure at 30 and 60 seconds adds one bounded reinforcement per step; the HUD counts down to the next step, and the clock pauses in the service room
 - A shared salvage quota from kills grants each crew member one personal augment-offer reroll after the clear; loot picks remain independent
 - Optional precision reload: press R again during the highlighted window to shorten the remaining reload and charge the next shot for 20% more damage
 - Automatic co-op reconnection after a brief network interruption: the live host reserves the operative's identity, class, equipment, and run build for 60 seconds; teammates see the reconnect countdown
@@ -74,11 +74,11 @@ Click the game view to lock the cursor after a run starts.
 - Sector-specific Overtime squad votes after a clear: the terminal names the hazard and reward before commitment, ties stay stable, and a successful next encounter grants a second augment draft
 - Five boss grafts with visible suit parts: Arc Spine charges chain shots after a class skill, Kinetic Rig turns a dash into a shockwave, Reclaimer Core repairs nearby crew after kills, Phase Coupler turns a dash into angle-control shots, and Siphon Halo trades a charged round for a close pulse and skill recovery on precision reload
 - More decisive class skills on longer cooldowns: Vanguard draws fire under 75% protection, Breacher interrupts and displaces a group, Runner refills and resets dash while Overclocked, and Medic heals or revives nearby crew
-- Every wave entry chooses validated, separated crew positions and the client snaps its predicted position to that entry, including sector changes
+- Every wave entry chooses validated, separated crew positions and the client snaps its predicted position to that entry, including sector changes; the entry brief names the selected bay and machine station setup
 - In-game field manual catalogs twelve weapons, elemental reactions, 37 augments, 24 talents, five grafts, four skills, and thirteen hostile types
 - Host-selected 30, 60, or 120 second service decision window with clear automatic departure and a two-second early countdown once all living crew have selected and voted
 
-See [GAME_GUIDE.md](GAME_GUIDE.md) for the content roster, [planning/MACHINES_AND_BAYS.md](planning/MACHINES_AND_BAYS.md) for the new controls and geometry, [planning/REFERENCE_DEVELOPMENT.md](planning/REFERENCE_DEVELOPMENT.md) for source-by-source research, the [Lethal Company deep dive](planning/LETHAL_COMPANY_DEEP_DIVE.md) for co-op design decisions, the [Deadzone: Rogue deep dive](planning/DEADZONE_ROGUE_DEEP_DIVE.md) for gun feel, elements and encounter design, and the original [BLACKSITE SHIFT research and production plan](planning/PRODUCTION_PLAN.md).
+See [GAME_GUIDE.md](GAME_GUIDE.md) for the content roster, [planning/MACHINES_AND_BAYS.md](planning/MACHINES_AND_BAYS.md) for the controls and geometry, and [planning/REFERENCE_DEVELOPMENT.md](planning/REFERENCE_DEVELOPMENT.md) for source-by-source research. The detailed reference studies cover [Lethal Company](planning/LETHAL_COMPANY_DEEP_DIVE.md), [Deadzone: Rogue](planning/DEADZONE_ROGUE_DEEP_DIVE.md), [Risk of Rain (2013)](planning/RISK_OF_RAIN_2013_DEEP_DIVE.md), and [Risk of Rain 2](planning/RISK_OF_RAIN_2_DEEP_DIVE.md). The original [BLACKSITE SHIFT research and production plan](planning/PRODUCTION_PLAN.md) remains the governing design brief.
 
 This is still a prototype. It has no persistence or matchmaking, and the multiplayer protocol is meant for trusted play sessions rather than public deployment.
 

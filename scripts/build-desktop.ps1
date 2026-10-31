@@ -1,4 +1,7 @@
-param()
+param(
+  [ValidateSet('BLACKSITE SHIFT-win32-x64', 'BLACKSITE SHIFT-dev-win32-x64')]
+  [string]$OutputName = 'BLACKSITE SHIFT-win32-x64'
+)
 $ErrorActionPreference = 'Stop'
 
 $projectRoot = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..'))
@@ -7,7 +10,7 @@ $archiveName = "electron-v$version-win32-x64.zip"
 $releaseBase = "https://github.com/electron/electron/releases/download/v$version"
 $cacheDir = Join-Path $projectRoot '.build-cache'
 $distDir = Join-Path $projectRoot 'dist'
-$targetDir = Join-Path $distDir 'BLACKSITE SHIFT-win32-x64'
+$targetDir = Join-Path $distDir $OutputName
 $archivePath = Join-Path $cacheDir $archiveName
 $checksumPath = Join-Path $cacheDir 'SHASUMS256.txt'
 
@@ -28,8 +31,17 @@ if (Test-Path -LiteralPath $targetDir) {
   $resolved = [IO.Path]::GetFullPath($targetDir)
   $safeRoot = [IO.Path]::GetFullPath($distDir).TrimEnd('\') + '\'
   if (!$resolved.StartsWith($safeRoot, [StringComparison]::OrdinalIgnoreCase) -or
-      [IO.Path]::GetFileName($resolved) -ne 'BLACKSITE SHIFT-win32-x64') {
+      [IO.Path]::GetFileName($resolved) -ne $OutputName) {
     throw "Refusing to remove unexpected build path: $resolved"
+  }
+  $existingExe = Join-Path $resolved 'BLACKSITE SHIFT.exe'
+  if (Test-Path -LiteralPath $existingExe) {
+    try {
+      $lockCheck = [IO.File]::Open($existingExe, [IO.FileMode]::Open, [IO.FileAccess]::ReadWrite, [IO.FileShare]::None)
+      $lockCheck.Dispose()
+    } catch {
+      throw "Build target is running. Close it or use -OutputName 'BLACKSITE SHIFT-dev-win32-x64'."
+    }
   }
   Remove-Item -LiteralPath $resolved -Recurse -Force
 }

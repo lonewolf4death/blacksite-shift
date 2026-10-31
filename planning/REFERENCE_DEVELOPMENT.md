@@ -54,7 +54,7 @@ The four release pillars are **tactile guns, visible adaptation, shared industri
 
 **Original response:** Only active encounters accrue pressure. Delaying to operate a machine or revive a teammate risks reinforcements and a floor cycle, while moving quickly may leave a powerful tactic unused. Safe service decisions stop that clock. Use discrete director bands: heavier role mix, an elite threat, and modest frequency changes. Keep enemy health growth slower than combined player damage and cap simultaneous major windups.
 
-**Current implementation:** encounter hazards and bounded active-enemy/major-attack budgets; no safe-room pressure. **Next depth pass:** add a visible pressure band with a clear, finite step table and one optional side reward that costs encounter time. Do not hide a difficulty multiplier in the background.
+**Current implementation:** encounter hazards, bounded active-enemy/major-attack budgets, a 30/60-second pressure band with a HUD countdown to the next extra reinforcement, and no safe-room pressure. The source audit, fairness rules, timing model and prototype gate are in [RISK_OF_RAIN_2013_DEEP_DIVE.md](RISK_OF_RAIN_2013_DEEP_DIVE.md). **Next depth pass:** test an optional side reward that costs encounter time, and record why a run ended. Do not hide a difficulty multiplier in the background.
 
 **Acceptance:** Players can state whether lingering costs them anything; a long fight gets harder in a predictable, bounded way; four-player output never creates an unreadable number of major telegraphs.
 
@@ -64,7 +64,7 @@ The four release pillars are **tactile guns, visible adaptation, shared industri
 
 **Original response:** Build room kits with designed sight lines, flank routes, cover and machine placements. The director selects an authored layout variant, role mix, boss pattern, reward offers and Overtime condition. Use a run seed for reproducible bug reports and daily challenges later. A build may amplify a weapon, but the room remains designed for manual aiming and movement. Finish a three-sector standard run before offering an endless loop.
 
-**Current implementation:** three sector themes, two authored cover layouts per sector selected from a run seed, three fixed boss arenas, randomized enemy mix and reward offers, bounded active threat, and a nine-wave ending. **Next depth pass:** replace each sector's single arena with several authored rooms and route ordering, using full deterministic manifests and spawn validation. Make variants change the shooter's decisions, not only wall colors.
+**Current implementation:** three sector themes, five authored cover layouts per sector selected from a run seed, three fixed boss arenas, seeded encounter orders and reward offers, bounded active threat, a nine-wave ending, and a wave-entry line identifying the chosen bay and machine stations. The source audit, agency and item-pool rules, co-op edge cases, geometry contracts and prototype gate are in [RISK_OF_RAIN_2_DEEP_DIVE.md](RISK_OF_RAIN_2_DEEP_DIVE.md). **Next depth pass:** build several distinct authored rooms and route orderings, with full deterministic manifests and spawn validation. Make variants change the shooter's decisions, not only wall colors.
 
 **Acceptance:** Two runs with the same seed reproduce their room/reward sequence. Two distinct seeds create different tactical routes without clipping, wall spawns, or unreachable enemies. Boss attack lanes remain reliable.
 
