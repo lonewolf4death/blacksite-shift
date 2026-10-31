@@ -225,8 +225,8 @@ function makePickup(kind) {
   g.userData.mesh=mesh;return g;
 }
 function weaponModel(kind) {
-  const metals={pulse:0x7775a4,smg:0x416e62,rail:0x78766e,launcher:0x8a5543,arcgun:0x3e7183,cryo:0x547e95,saw:0x777253,burst:0x596742,harpoon:0x75654c,gravity:0x425f79};
-  const accents={pulse:0xb9aef1,smg:0x75d9bd,rail:0xffe4a6,launcher:0xff9359,arcgun:0x83d8f5,cryo:0xa5ecff,saw:0xe8d599,burst:0xe0f17b,harpoon:0xf0c58c,gravity:0x91c7ff};
+  const metals={pulse:0x7775a4,smg:0x416e62,rail:0x78766e,launcher:0x8a5543,arcgun:0x3e7183,cryo:0x547e95,saw:0x777253,burst:0x596742,harpoon:0x75654c,gravity:0x425f79,borer:0x74634b};
+  const accents={pulse:0xb9aef1,smg:0x75d9bd,rail:0xffe4a6,launcher:0xff9359,arcgun:0x83d8f5,cryo:0xa5ecff,saw:0xe8d599,burst:0xe0f17b,harpoon:0xf0c58c,gravity:0x91c7ff,borer:0xffaa63};
   const g=new T.Group(), metal=mat(metals[kind]||0x536357,{metalness:.7,roughness:.4}),dark=mat(0x202a23),accent=mat(accents[kind]||0xb9c5a1,{metalness:.55,roughness:.3,emissive:accents[kind]||0x000000,emissiveIntensity:accents[kind]?.45:0});
   if(kind==='scatter'){
     box(g,[.28,.2,.72],[0,-.04,-.2],metal);
@@ -250,6 +250,11 @@ function weaponModel(kind) {
     box(g,[.47,.14,.3],[0,-.06,.17],dark);
     for(const side of [-1,1])box(g,[.06,.07,.5],[side*.17,.12,-.49],accent);
     box(g,[.15,.1,.16],[0,.22,-.2],accent);
+  } else if(kind==='borer'){
+    box(g,[.34,.29,.82],[0,-.03,-.2],metal);box(g,[.22,.2,.7],[0,.03,-.69],dark);
+    box(g,[.2,.19,.14],[0,.04,-1.1],accent);box(g,[.19,.39,.2],[0,-.34,.04],dark);
+    for(const side of [-1,1]){box(g,[.07,.16,.62],[side*.22,.11,-.48],metal);box(g,[.035,.08,.48],[side*.27,.17,-.48],accent);}
+    box(g,[.25,.07,.21],[0,.26,-.17],accent);
   } else if(kind==='launcher'){
     box(g,[.42,.37,.68],[0,-.03,-.23],metal);box(g,[.31,.3,.65],[0,.01,-.76],dark);box(g,[.3,.29,.09],[0,.01,-1.13],accent);
     box(g,[.2,.37,.18],[0,-.39,.05],dark);box(g,[.44,.12,.31],[0,.2,-.1],accent);
@@ -286,7 +291,7 @@ function weaponModel(kind) {
   const actions={scatter:[.27,.12,.37,0,-.16,-.58],smg:[.16,.055,.27,0,.14,-.27],
     carbine:[.2,.07,.31,0,.16,-.39],burst:[.2,.07,.3,0,.17,-.36],pulse:[.15,.095,.32,0,.15,-.5],
     rail:[.13,.09,.66,0,.16,-.58],launcher:[.26,.11,.28,0,.2,-.21],arcgun:[.17,.09,.39,0,.17,-.44],
-    cryo:[.17,.09,.39,0,.17,-.44],saw:[.19,.08,.25,0,.2,-.45],harpoon:[.17,.1,.46,0,.2,-.48],gravity:[.25,.1,.28,0,.22,-.25]};
+    cryo:[.17,.09,.39,0,.17,-.44],saw:[.19,.08,.25,0,.2,-.45],harpoon:[.17,.1,.46,0,.2,-.48],gravity:[.25,.1,.28,0,.22,-.25],borer:[.2,.11,.4,0,.2,-.5]};
   const [aw,ah,al,ax,ay,az]=actions[kind]||actions.carbine;
   const litAction=['pulse','arcgun','cryo','gravity'].includes(kind);
   const action=box(g,[aw,ah,al],[ax,ay,az],litAction?accent:metal);
@@ -296,18 +301,18 @@ function weaponModel(kind) {
     rotor.position.set(kind==='saw'?0:.27,kind==='saw'?.09:.05,kind==='saw'?-1.04:-.3);
     rotor.rotation.y=kind==='saw'?0:Math.PI/2;g.add(rotor);g.userData.rotor=rotor;
   }
-  if(['arcgun','cryo','pulse','gravity'].includes(kind))g.userData.coil=accent;
+  if(['arcgun','cryo','pulse','gravity','borer'].includes(kind))g.userData.coil=accent;
   // Give each chassis an immediate shot signature without persistent lights or particles.
-  const flashColors={scatter:0xffb77a,smg:0x9af3cf,pulse:0xc5baff,rail:0xfff0cc,launcher:0xffa06b,arcgun:0x9eeaff,cryo:0xc4f5ff,saw:0xf2dfac,harpoon:0xffd49c,gravity:0xb0cfff};
+  const flashColors={scatter:0xffb77a,smg:0x9af3cf,pulse:0xc5baff,rail:0xfff0cc,launcher:0xffa06b,arcgun:0x9eeaff,cryo:0xc4f5ff,saw:0xf2dfac,harpoon:0xffd49c,gravity:0xb0cfff,borer:0xffb677};
   const heavyFlash=kind==='launcher'||kind==='gravity',wideFlash=kind==='scatter',slimFlash=kind==='rail'||kind==='harpoon';
   const flash=new T.Mesh(new T.ConeGeometry(wideFlash?.23:slimFlash?.09:heavyFlash?.19:.14,slimFlash?.64:heavyFlash?.38:.48,6),new T.MeshBasicMaterial({color:flashColors[kind]||0xffe39a,transparent:true,opacity:.86,depthWrite:false}));
   flash.rotation.x=-Math.PI/2;flash.position.set(0,.04,kind==='scatter'?-1.03:kind==='smg'?-1.01:-1.24);flash.visible=false;g.add(flash);
   g.userData.flash=flash;g.userData.spin=0;return g;
 }
-function makeProjectile(kind,charged=false,phase=false){
-  const colors={carbine:0xd6ec53,scatter:0xffbd77,smg:0x73ddba,pulse:0xbbacff,rail:0xfff0ae,launcher:0xff8c56,arcgun:0x83d8f5,cryo:0x9de9ff,saw:0xe7d89c,burst:0xddf06e,harpoon:0xf0c58c,gravity:0x91c7ff,fragment:0xffbb79,enemy:0xff855f,sniper:0xff5570,boss:0xff5374};
+function makeProjectile(kind,charged=false,phase=false,heatHigh=false){
+  const colors={carbine:0xd6ec53,scatter:0xffbd77,smg:0x73ddba,pulse:0xbbacff,rail:0xfff0ae,launcher:0xff8c56,arcgun:0x83d8f5,cryo:0x9de9ff,saw:0xe7d89c,burst:0xddf06e,harpoon:0xf0c58c,gravity:0x91c7ff,borer:0xffa66c,fragment:0xffbb79,enemy:0xff855f,sniper:0xff5570,boss:0xff5374};
   const size=kind==='pulse'||kind==='launcher'||kind==='gravity'?.18:kind==='boss'?.2:kind==='saw'||kind==='harpoon'?.16:kind==='enemy'||kind==='sniper'?.12:kind==='scatter'?.10:kind==='smg'?.08:.095;
-  const color=phase?0xd8b9ff:charged?0xa5efff:colors[kind]||0xffffff,g=new T.Group();
+  const color=phase?0xd8b9ff:charged?0xa5efff:heatHigh?0xffd082:colors[kind]||0xffffff,g=new T.Group();
   const solid=new T.MeshBasicMaterial({color}),glow=new T.MeshBasicMaterial({color,transparent:true,opacity:.42,depthWrite:false});
   if(kind==='saw'){
     const disc=new T.Mesh(new T.CylinderGeometry(.22,.22,.045,12),solid);disc.rotation.x=Math.PI/2;g.add(disc);
@@ -798,7 +803,7 @@ export class GameScene {
     for(const b of state.projectiles){
       activeProjectiles.add(b.id);
       let obj=this.projectiles.get(b.id);
-      if(!obj){obj=makeProjectile(b.kind,b.arcCharged,b.phaseCharged);this.scene.add(obj);this.projectiles.set(b.id,obj);}
+      if(!obj){obj=makeProjectile(b.kind,b.arcCharged,b.phaseCharged,b.heatHigh);this.scene.add(obj);this.projectiles.set(b.id,obj);}
       setProjectileVisibility(obj,b.side==='player'&&b.ownerId!==myId?Math.max(.25,Math.min(1,Number(this.settings.allyProjectiles)/100||1)):1);
       obj.position.set(b.x+b.vx*age,b.h+b.vh*age,b.y+b.vy*age);
       const dir=new T.Vector3(b.vx,b.vh,b.vy).normalize();
@@ -851,18 +856,18 @@ export class GameScene {
     this.impacts.push({mesh,velocity:new T.Vector3(0,.2,0),ttl:.14});
   }
   skillEffect(classId,x,z){
-    const colors={vanguard:0xd6ec53,breacher:0xf4924f,runner:0x75d9bd,medic:0xb5b0f3,shrapnel:0xffa267,arc:0x8fdcff,conduction:0x8cdbff,siphon:0xf4d68a,salvage:0xd6ec53,bounce:0xd6ec53,explosion:0xff8c56,gravityBlast:0x91c7ff,tether:0xf0c58c,markBreak:0xffdc92,weldBeam:0xffad61,bossShear:0xffad61,coolantLance:0x8de6ff,reactorPress:0xff7d6c,bossOverdrive:0xff6b57,stagger:0xffc98b,wardenPress:0xffa36b,coldPulse:0x8de6ff,bossPurge:0x8de6ff,bruteSlam:0xffc06d,ramCrash:0xffad72,ramHit:0xff7d60,combustion:0xffb35e,toxin:0x75d9bd,frost:0x9de9ff,heal:0x8de9aa,kinetic:0xffad72,charge:0xff8c56,muzzle:0xff556c,spawn:0xffcf69,sapperBlast:0xffa36b,shield:0x8ed5e8};
+    const colors={vanguard:0xd6ec53,breacher:0xf4924f,runner:0x75d9bd,medic:0xb5b0f3,shrapnel:0xffa267,arc:0x8fdcff,conduction:0x8cdbff,siphon:0xf4d68a,salvage:0xd6ec53,bounce:0xd6ec53,explosion:0xff8c56,gravityBlast:0x91c7ff,tether:0xf0c58c,markBreak:0xffdc92,weldBeam:0xffad61,bossShear:0xffad61,coolantLance:0x8de6ff,reactorPress:0xff7d6c,bossOverdrive:0xff6b57,stagger:0xffc98b,wardenPress:0xffa36b,coldPulse:0x8de6ff,bossPurge:0x8de6ff,bruteSlam:0xffc06d,ramCrash:0xffad72,ramHit:0xff7d60,combustion:0xffb35e,toxin:0x75d9bd,frost:0x9de9ff,heal:0x8de9aa,kinetic:0xffad72,charge:0xff8c56,muzzle:0xff556c,spawn:0xffcf69,sapperBlast:0xffa36b,shield:0x8ed5e8,vent:0xffaa63};
     const radius=classId==='breacher'?5.5:classId==='medic'?7.5:classId==='heal'?5:classId==='siphon'?2.8:classId==='kinetic'?2.5:classId==='sapperBlast'?2.1:classId==='wardenPress'?2.7:classId==='reactorPress'?2.25:classId==='bruteSlam'?2.45:classId==='gravityBlast'?2.9:classId==='bossPurge'?4.1:classId==='coldPulse'?3.1:classId==='shrapnel'||classId==='explosion'?2.4:classId==='bossOverdrive'?2.2:classId==='ramCrash'||classId==='ramHit'?1.2:classId==='stagger'?.9:classId==='bounce'||classId==='tether'||classId==='markBreak'?.6:classId==='muzzle'?.9:classId==='spawn'||classId==='conduction'?1.1:2;
     const mesh=new T.Mesh(new T.TorusGeometry(.6,.045,4,48),new T.MeshBasicMaterial({color:colors[classId]||0xffffff,transparent:true,opacity:.8,depthWrite:false,side:T.DoubleSide}));
     mesh.rotation.x=-Math.PI/2;mesh.position.set(x,.08,z);this.scene.add(mesh);
     this.skillRings.push({mesh,ttl:.65,life:.65,radius});
   }
-  shoot(kind){
+  shoot(kind,heatHigh=false){
     const dir=new T.Vector3();this.camera.getWorldDirection(dir);
     this.gun.userData.spin=Math.min(4,(this.gun.userData.spin||0)+1.5);
-    const obj=makeProjectile(kind);obj.position.copy(this.camera.position).addScaledVector(dir,.4);
+    const obj=makeProjectile(kind,false,false,heatHigh);obj.position.copy(this.camera.position).addScaledVector(dir,.4);
     obj.quaternion.setFromUnitVectors(new T.Vector3(0,0,-1),dir);
-    const speeds={carbine:38,scatter:26,smg:30,pulse:21,rail:72,launcher:16,arcgun:28,cryo:28,saw:24,burst:40,harpoon:34,gravity:17};
+    const speeds={carbine:38,scatter:26,smg:30,pulse:21,rail:72,launcher:16,arcgun:28,cryo:28,saw:24,burst:40,harpoon:34,gravity:17,borer:30};
     this.scene.add(obj);this.predicted.push({obj,velocity:dir.multiplyScalar(speeds[kind]||30),ttl:.12});
     if(['carbine','scatter','smg','rail','saw','burst','harpoon'].includes(kind)){
       const offset=new T.Vector3(.34,-.24,-.5).applyQuaternion(this.camera.quaternion);

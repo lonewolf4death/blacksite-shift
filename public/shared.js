@@ -1,4 +1,5 @@
-export const BUILD_VERSION = '0.22.1';
+export const BUILD_VERSION = '0.23.0';
+export const bayNames = ['INTAKE FLOOR','CROSSFLOW','SPLIT PRESS','OFFSET CHUTE','SERVICE GANTRY','FILTER STACK','REJECTED GOODS'];
 
 // Tile 3 is a low, walkable equipment deck. Its outer half-tile slopes up so
 // movement, camera height, and the rendered surface agree at every edge.
@@ -31,18 +32,30 @@ export const encounterOrders = [
 // The contractor publishes the cost before the crew votes. Each authorization
 // applies to one encounter and the host follows the same vote as everyone else.
 export const overtimeProtocols = [
-  { id:'redline', name:'REDLINE FEED', machine:'HYDRAULIC SHEAR',
+  { id:'redline', stage:0, name:'REDLINE FEED', machine:'HYDRAULIC SHEAR',
     hazard:'Unstable power: reinforcements arrive faster and molten floor cycles every 6 seconds for 50% more damage.',
     reward:'An extra augment draft for every surviving crew member on clear.',
-    notice:'THERMAL BYPASS AUTHORIZED · KEEP CLEAR OF THE PRESS' },
-  { id:'coldchain', name:'COLD CHAIN', machine:'CRYOGENIC PURGE',
+    notice:'THERMAL BYPASS AUTHORIZED · KEEP CLEAR OF THE PRESS',cycle:6,warnAt:2.75,activeAt:3.5,activeEnd:5.35,damageScale:1.5,spawnScale:.7 },
+  { id:'feeddebt', stage:0, name:'FEED DEBT', machine:'HYDRAULIC SHEAR',
+    hazard:'Three extra reinforcements enter this encounter. Machine calibration faults lock the controls for 1.2 seconds; each station takes 21 seconds to recharge.',
+    reward:'An extra augment draft for every surviving crew member on clear.',
+    notice:'FEED DEBT AUTHORIZED · PROTECT THE CALIBRATION TEAM',cycle:8,warnAt:4,activeAt:5,activeEnd:7,damageScale:1,spawnScale:.85,extraEnemies:3,faultLockout:1.2,machineCooldown:21 },
+  { id:'coldchain', stage:1, name:'COLD CHAIN', machine:'CRYOGENIC PURGE',
     hazard:'Coolant valves remain open: frost floors cycle every 6 seconds and slow the crew longer.',
     reward:'An extra augment draft for every surviving crew member on clear.',
-    notice:'COOLANT RECOVERY AUTHORIZED · PROTECT YOUR EXIT ROUTE' },
-  { id:'livegrid', name:'LIVE GRID', machine:'CAPACITOR BANK',
+    notice:'COOLANT RECOVERY AUTHORIZED · PROTECT YOUR EXIT ROUTE',cycle:6,warnAt:2.75,activeAt:3.5,activeEnd:5.35,slowDuration:2,spawnScale:.7 },
+  { id:'whiteout', stage:1, name:'WHITEOUT', machine:'CRYOGENIC PURGE',
+    hazard:'Frost floors stay live for 2.4 seconds each 8-second cycle and slow the crew for 3.2 seconds. Two extra reinforcements enter.',
+    reward:'An extra augment draft for every surviving crew member on clear.',
+    notice:'WHITEOUT AUTHORIZED · KEEP AN EXIT LANE OPEN',cycle:8,warnAt:4,activeAt:5,activeEnd:7.4,slowDuration:3.2,spawnScale:.85,extraEnemies:2 },
+  { id:'livegrid', stage:2, name:'LIVE GRID', machine:'CAPACITOR BANK',
     hazard:'The grid stays live: reinforcements arrive faster and reactor floors cycle every 6 seconds for 50% more damage.',
     reward:'An extra augment draft for every surviving crew member on clear.',
-    notice:'POWER RECLAMATION AUTHORIZED · STAND OFF THE CONTACTS' }
+    notice:'POWER RECLAMATION AUTHORIZED · STAND OFF THE CONTACTS',cycle:6,warnAt:2.75,activeAt:3.5,activeEnd:5.35,damageScale:1.5,spawnScale:.7 },
+  { id:'audit', stage:2, name:'AUDIT SWEEP', machine:'CAPACITOR BANK',
+    hazard:'Four extra reinforcements enter quickly. A calibration fault locks controls for 1.1 seconds and each capacitor station takes 23 seconds to recharge.',
+    reward:'An extra augment draft for every surviving crew member on clear.',
+    notice:'AUDIT SWEEP AUTHORIZED · HOLD THE ACCESS LANES',cycle:8,warnAt:4,activeAt:5,activeEnd:7,damageScale:1,spawnScale:.65,extraEnemies:4,faultLockout:1.1,machineCooldown:23 }
 ];
 
 export const classes = {
@@ -64,7 +77,8 @@ export const weapons = {
   saw: { name:'RIPTIDE DISC', mag: 8, damage: 39, interval: .48, range: 22, reload: 1.9, speed: 24, radius: .23, bounces: 3, pierce: 1, trait: '39 damage per contact. A wide disc can hit two hostiles and bounce off walls three times.' },
   burst: { name:'TRIAD BURST', mag: 21, damage: 17, interval: .31, range: 23, reload: 1.5, speed: 40, radius: .09, pellets: 3, spread: .026, trait: 'Three projectiles per trigger, 17 each. Center round always critically hits for 1.8× damage.' },
   harpoon: { name:'TETHER HARPOON', mag: 8, damage: 68, interval: .78, range: 21, reload: 2.05, speed: 34, radius: .14, trait: '68 damage. A surviving non-boss target is pulled up to 2.2 m toward you and marked for 3 s. The next crew hit consumes the mark for 30% more damage.' },
-  gravity: { name:'GRAVITY CANISTER', mag: 5, damage: 24, interval: .92, range: 19, reload: 2.2, speed: 17, radius: .2, blast: 2.9, trait: '24 impact damage plus a 2.9 m blast. Survivors in the blast are pulled up to 1.4 m toward its center and slowed 35% for 2 s. Direct targets take half blast damage.' }
+  gravity: { name:'GRAVITY CANISTER', mag: 5, damage: 24, interval: .92, range: 19, reload: 2.2, speed: 17, radius: .2, blast: 2.9, trait: '24 impact damage plus a 2.9 m blast. Survivors in the blast are pulled up to 1.4 m toward its center and slowed 35% for 2 s. Direct targets take half blast damage.' },
+  borer: { name:'THERMAL BORER', mag: 24, damage: 13, interval: .12, range: 17, reload: 1.7, speed: 30, radius: .1, pierce: 1, trait: '13-damage cutter bolts pierce one hostile. Each shot adds 12 heat; at 80 heat, bolts widen and slow surviving targets 15% for 1.2 s. At 100 heat it vents for 1.2 s. Heat cools 24/s while idle; precision reload removes 30 heat. Reserve ammo is unlimited.' }
 };
 
 export const weaponNotes = {
@@ -79,7 +93,8 @@ export const weaponNotes = {
   saw:'Disc rebounds only from walls. Its first hostile penetration leaves it active; further direct hits need added pierce.',
   burst:'One trigger consumes one round and launches all three projectiles. The center projectile can still miss; its guaranteed crit does not affect the side rounds.',
   harpoon:'A physical bolt moves its first surviving non-boss victim toward the shooter in safe steps; solid walls stop the pull. Mark lasts 3 s. The next damage event from any crew member consumes it for 30% more damage. Bosses take the hit but resist displacement.',
-  gravity:'The canister detonates on a hostile, wall or range limit. The direct target takes 24 impact plus half blast damage. Solid cover blocks the blast. Each surviving visible enemy in radius is drawn toward the explosion in safe steps and moves at 65% speed for 2 s. BLAST JACKET also enlarges this blast.'
+  gravity:'The canister detonates on a hostile, wall or range limit. The direct target takes 24 impact plus half blast damage. Solid cover blocks the blast. Each surviving visible enemy in radius is drawn toward the explosion in safe steps and moves at 65% speed for 2 s. BLAST JACKET also enlarges this blast.',
+  borer:'Fire short bursts to avoid the 1.2 s vent, or reach 80 heat to widen bolts and control a lane. The high-heat effect slows surviving targets to 85% speed for 1.2 s. Swapping weapons lets the Borer cool. A successful precision reload removes 30 heat immediately.'
 };
 
 export const enemyIntel = {
@@ -190,6 +205,9 @@ export const upgrades = [
   { id:'fragment', name:'FRAGMENTATION', detail:'Mortar or gravity canister explosions and FRAG PROTOCOL kills launch three 16-damage fragments, each with 4 m range.', kind:'PROJECTILE', rarity:'RARE', icon:'✹' },
   { id:'snapfreeze', name:'SNAP FREEZE', detail:'A precision reload slows visible enemies within 2.8 m to 50% speed for 2 s. Each extra stack adds 0.5 m radius.', kind:'RELOAD', rarity:'RARE', icon:'❄' },
   { id:'quench', name:'QUENCH VALVE', detail:'Using a class skill slows visible enemies within 4 m to 50% speed for 2 s. Each extra stack adds 1 m radius.', kind:'CLASS', rarity:'RARE', icon:'◈' },
+  { id:'bankSignal', name:'BANK SIGNAL', detail:'A wall-rebounded hit marks a surviving target for 3 s. The next crew damage event on it deals 30% more damage. Each extra stack adds 1 s, up to 6 s. Requires a bouncing weapon.', kind:'PROJECTILE', rarity:'RARE', requiresBounce:true, icon:'↗' },
+  { id:'controlSplice', name:'CONTROL SPLICE', detail:'Completing a machine calibration primes your next three trigger pulls. Those shots pierce one extra hostile but deal 20% less direct damage. Charges do not stack.', kind:'MACHINE', rarity:'RARE', icon:'⌁' },
+  { id:'serviceWard', name:'SERVICE WARD', detail:'Completing a machine calibration grants you and crew within 5 m 25% damage reduction for 4 s. Refreshes instead of stacking.', kind:'MACHINE', rarity:'RARE', icon:'▧' },
   { id:'bulwarkPlus', name:'LONG WATCH', detail:'Bulwark lasts 2 s longer. Allies within 5 m take 25% less damage instead of 15%; enemies already prefer your position.', kind:'CLASS', rarity:'SIGNATURE', classId:'vanguard', icon:'▧' },
   { id:'shockPlus', name:'WIDE BREACH', detail:'Shockwave radius grows from 5.5 m to 7 m, damage from 110 to 135, and attack delay from 1.5 s to 2.2 s.', kind:'CLASS', rarity:'SIGNATURE', classId:'breacher', icon:'◉' },
   { id:'overclockPlus', name:'ADRENAL LOOP', detail:'Kills during Overclock extend it by 1 second.', kind:'CLASS', rarity:'SIGNATURE', classId:'runner', icon:'⌁' },

@@ -24,7 +24,7 @@
     <div class="hud-bottom">
       <div class="health-block"><span class="eyebrow">OPERATIVE VITALS</span><div class="health-numbers"><strong id="health-number">100</strong><span id="health-max">/ 100</span></div><div class="health-track"><div id="health-fill"></div></div><span id="dash-label" class="subreadout">DASH READY <span>◆</span></span><span id="skill-label" class="subreadout skill-readout">E BULWARK READY</span><span id="graft-hud" class="subreadout graft-readout hidden"></span></div>
       <div class="center-hint" id="center-hint">CLICK TO LOCK CURSOR</div>
-      <div class="weapon-block"><span class="eyebrow" id="class-name">VANGUARD</span><strong id="weapon-name">M-24 CARBINE</strong><div class="ammo-line"><span id="ammo-number">24</span><small id="reserve-number">/ ∞</small></div><span id="secondary-weapon" class="subreadout">1 PRIMARY · 2 EMPTY</span><span id="reload-label" class="subreadout">R RELOAD · UNLIMITED RESERVE</span></div>
+      <div class="weapon-block"><span class="eyebrow" id="class-name">VANGUARD</span><strong id="weapon-name">M-24 CARBINE</strong><div class="ammo-line"><span id="ammo-number">24</span><small id="reserve-number">/ ∞</small></div><span id="heat-hud" class="subreadout heat-hud hidden">HEAT 0 / 100</span><span id="control-hud" class="subreadout hidden">CONTROL SPLICE · 0 SHOTS</span><span id="secondary-weapon" class="subreadout">1 PRIMARY · 2 EMPTY</span><span id="reload-label" class="subreadout">R RELOAD · UNLIMITED RESERVE</span></div>
     </div>
     <div class="right-stack"><div id="squad" class="squad"></div><div class="combat-tracker" aria-label="Run tracker"><div class="tracker-heading">RUN TELEMETRY <span>● LIVE</span></div><div class="tracker-grid"><div><small>DAMAGE</small><strong id="track-damage">0</strong></div><div><small>KILLS</small><strong id="track-kills">0</strong></div><div><small>5S DPS</small><strong id="track-dps">0</strong></div><div><small>ACCURACY</small><strong id="track-accuracy">0%</strong></div></div></div></div>
     <div id="crosshair"><i></i><i></i><i></i><i></i><b></b></div>
@@ -38,7 +38,7 @@
   </div>
 
   <main id="menu" class="screen">
-    <div class="menu-rail"><span>RESTRICTED ACCESS // SECTOR 09</span><span>BUILD 0.22 / MACHINE CALIBRATION</span></div>
+    <div class="menu-rail"><span>RESTRICTED ACCESS // SECTOR 09</span><span>BUILD 0.23 / OVERTIME PROTOCOLS</span></div>
     <div class="menu-content">
       <div class="kicker"><span class="live-dot"></span> MULTIPLAYER ROGUELITE FPS</div>
       <h1>BLACKSITE<br><em>SHIFT</em><span class="title-period">.</span></h1>
@@ -73,6 +73,7 @@
   <section id="upgrade" class="panel-overlay hidden" aria-label="Choose an augment">
     <div class="upgrade-wrap"><div class="upgrade-heading"><span class="eyebrow" id="choice-stage">WAVE CLEARED // STATION ONLINE</span><h2>BUILD YOUR <em>LOADOUT</em></h2><p>Choose an augment, armory weapon, class talent, and boss graft when available. Automatic departure occurs at the visible countdown.</p><span id="upgrade-timer">60</span></div>
       <div class="contract-ledger" aria-label="Contract account"><div><small>WORK ORDER / SETTLEMENT</small><strong id="ledger-order">AWAITING ASSIGNMENT</strong><span id="ledger-result">A VERIFIED ORDER PAYS ONE CREDIT</span></div><div><small>SECTOR CREDIT</small><strong id="ledger-credit">0 / 2</strong><span>TWO CREDITS PAY AN EXTRA BOSS DRAFT</span></div><div><small>CONTRACT STRAIN</small><strong id="ledger-strain">0 / 2</strong><span id="ledger-strain-effect">MISSED ORDERS ADD NEXT-WAVE REINFORCEMENTS</span></div></div>
+      <div class="encounter-report" aria-label="Previous encounter report"><div><small>INCIDENT REPORT // PREVIOUS ENCOUNTER</small><strong id="report-summary">AWAITING REPORT</strong><span id="report-contribution">Equipment telemetry will appear after the first clear.</span></div><div id="report-metrics" class="report-metrics"></div><div id="report-crew" class="report-crew"></div></div>
       <div class="overtime-terminal" aria-label="Overtime terminal">
         <div class="overtime-copy"><small>CONTRACTOR AUTHORIZATION // SQUAD VOTE</small><strong id="overtime-name">OVERTIME PROTOCOL</strong><p id="overtime-hazard">Unstable power: faster reinforcements and more frequent floor hazards.</p><span id="overtime-reward">REWARD ON CLEAR: AN EXTRA AUGMENT DRAFT FOR EVERY SURVIVOR</span><small id="overtime-machine">NEXT MACHINE: HYDRAULIC SHEAR</small></div>
         <div class="overtime-controls"><small id="overtime-tally">0 YES · 0 NO · 0 CREW</small><div><button id="vote-stable" type="button">STABLE ROUTE</button><button id="vote-overtime" type="button">ACTIVATE OVERTIME ⚡</button></div><small id="overtime-my-vote">MAJORITY REQUIRED · TIES STAY STABLE</small></div>
@@ -87,7 +88,7 @@
     <div class="panel gameover-panel"><div class="panel-top"><span>INCIDENT REPORT</span><span class="critical" id="result-signal">● SIGNAL LOST</span></div><div class="panel-body"><div class="eyebrow" id="result-kicker">RUN TERMINATED</div><h2 id="result-title">END OF<br><em>SHIFT.</em></h2><p id="gameover-stats">Your squad reached wave 01.</p><button id="retry-button" class="primary wide">RUN IT BACK <span>↗</span></button></div></div>
   </section>
   <section id="manual" class="panel-overlay hidden" aria-label="Field manual">
-    <div class="panel manual-panel"><div class="panel-top"><span>CONTRACTOR FIELD INTELLIGENCE // REV 0.22</span><button id="manual-close" type="button">✕ CLOSE</button></div>
+    <div class="panel manual-panel"><div class="panel-top"><span>CONTRACTOR FIELD INTELLIGENCE // REV 0.23</span><button id="manual-close" type="button">✕ CLOSE</button></div>
       <nav class="manual-nav" aria-label="Manual sections"><button type="button" data-manual="weapons">WEAPONS</button><button type="button" data-manual="effects">EFFECTS</button><button type="button" data-manual="classes">CLASSES</button><button type="button" data-manual="augments">AUGMENTS</button><button type="button" data-manual="enemies">THREATS</button></nav>
       <div id="manual-content" class="manual-content"></div><div class="manual-foot">THE RUN CONTINUES WHILE THIS TERMINAL IS OPEN · H / ESC TO CLOSE</div></div>
   </section>

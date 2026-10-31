@@ -3,7 +3,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import crypto from 'node:crypto';
 import { fileURLToPath } from 'node:url';
-import { BUILD_VERSION, classes, weapons, upgrades, stages, talents, grafts, overtimeProtocols, encounterOrders, enemyStats, workOrders, floorHeightAt } from './public/shared.js';
+import { BUILD_VERSION, bayNames, classes, weapons, upgrades, stages, talents, grafts, overtimeProtocols, encounterOrders, enemyStats, workOrders, floorHeightAt } from './public/shared.js';
 
 const ROOT = path.dirname(fileURLToPath(import.meta.url));
 const PORT = Number(process.env.PORT || 3000);
@@ -47,9 +47,15 @@ const roomLayouts=stageMaps.map((base,stage)=>{
   for(const [x,y] of crossCover[stage])cross[y][x]=1;
   const diagonal=base.map(row=>[...row]);
   const gantry=base.map(row=>[...row]);
+  const filterStack=base.map(row=>[...row]);
+  const rejectedGoods=base.map(row=>[...row]);
   for(const [x,y] of [[6,9],[18,9],[6,15],[18,15],[10,5],[14,19]])if(!diagonal[y][x])diagonal[y][x]=1;
   for(const [x,y] of [[4,10],[20,14],[8,8],[16,16],[8,16],[16,8]])if(!gantry[y][x])gantry[y][x]=1;
-  const variants=[base.map(row=>[...row]),alternate,cross,diagonal,gantry];
+  // Long half-wall runs create height-aware firing lanes; paired decks give
+  // operators a route choice without splitting the navmesh into islands.
+  for(const [x,y] of [[6,11],[7,11],[8,11],[16,13],[17,13],[18,13],[10,16],[11,16],[13,8],[14,8]])if(filterStack[y][x]===0)filterStack[y][x]=2;
+  for(const [x,y] of [[5,9],[6,9],[18,15],[19,15],[9,14],[10,14],[14,10],[15,10],[8,18],[16,6]])if(rejectedGoods[y][x]===0)rejectedGoods[y][x]=2;
+  const variants=[base.map(row=>[...row]),alternate,cross,diagonal,gantry,filterStack,rejectedGoods];
   const lowPatterns=[[[9,8],[10,8],[14,8],[15,8],[9,17],[10,17],[14,17],[15,17]],
     [[7,9],[8,9],[16,9],[17,9],[7,16],[8,16],[16,16],[17,16]],
     [[9,6],[10,6],[14,6],[15,6],[9,18],[10,18],[14,18],[15,18]],
@@ -60,6 +66,10 @@ const roomLayouts=stageMaps.map((base,stage)=>{
     const grid=variants[v];
     for(const [cx,cy] of deckCenters[(v+stage)%5])for(let dy=-1;dy<=1;dy++)for(let dx=-1;dx<=1;dx++)if(grid[cy+dy]?.[cx+dx]===0)grid[cy+dy][cx+dx]=3;
     for(const [x,y] of lowPatterns[(v+stage)%5])if(grid[y]?.[x]===0)grid[y][x]=2;
+    if(v===5||v===6){
+      const extra=v===5?[[8,17],[16,7]]:[[7,14],[17,10]];
+      for(const [cx,cy] of extra)for(let dy=-1;dy<=1;dy++)for(let dx=-1;dx<=1;dx++)if(grid[cy+dy]?.[cx+dx]===0)grid[cy+dy][cx+dx]=3;
+    }
   }
   return variants;
 });
@@ -68,7 +78,7 @@ function selectLayout(seed,wave){
   if(wave%3===0)return 0; // boss sight lines are authored and stable
   let value=(seed||0)^Math.imul(wave,0x9e3779b9);
   value=Math.imul(value^(value>>>16),0x85ebca6b);
-  return (value>>>0)%5;
+  return (value>>>0)%bayNames.length;
 }
 export function selectEncounterOrder(seed,wave,stageIndex){
   const orders=encounterOrders[stageIndex]||encounterOrders[0];
@@ -84,7 +94,7 @@ const machineSite={x:12.5,y:7.5,targetX:12.5,targetY:12.5,radius:3.2};
 const MACHINE_HOLD_SECONDS=.65;
 const MACHINE_MODES={valves:{name:'VALVE CASCADE',steps:3,channels:3,lockout:1.5},circuit:{name:'CIRCUIT BRIDGE',steps:3,channels:4,lockout:1.1},pressure:{name:'PRESSURE BALANCE',steps:4,channels:5,lockout:.65}};
 function machineStations(grid,variant,wave,seed){
-  const difficulty=wave%3===0?'pressure':['valves','circuit','pressure','valves','circuit'][variant];
+  const difficulty=wave%3===0?'pressure':['valves','circuit','pressure','valves','circuit','pressure','valves'][variant];
   const count=difficulty==='valves'?3:difficulty==='circuit'?2:1;
   const anchors=[{...machineSite},{x:6.5,y:17.5,targetX:8.5,targetY:14.5,radius:2.75},{x:18.5,y:17.5,targetX:16.5,targetY:14.5,radius:2.75}];
   return anchors.slice(0,count).map((anchor,index)=>{
@@ -115,8 +125,14 @@ export function selectWorkOrder(seed,wave){
   const step=(value&0x10000)?2:1;
   return ['machine','speed','intact'][(first+slot*step)%3];
 }
-const nextProtocol=room=>overtimeProtocols[Math.floor(room.wave/3)%overtimeProtocols.length];
-const activeProtocol=room=>overtimeProtocols[room.stageIndex];
+export function selectOvertimeProtocol(seed,wave){
+  const stage=Math.floor((wave-1)/3)%stages.length;
+  const choices=overtimeProtocols.filter(p=>p.stage===stage);
+  const value=Math.imul((seed||0)^Math.imul(wave,0x9e3779b9),0x85ebca6b);
+  return choices[((value^(value>>>16))>>>0)%choices.length];
+}
+const nextProtocol=room=>selectOvertimeProtocol(room.runSeed||room.seedOverride||0,Math.min(9,room.wave+1));
+const activeProtocol=room=>room.protocol||overtimeProtocols.find(p=>p.stage===room.stageIndex)||overtimeProtocols[0];
 
 const wall = (x, y, grid=map) => !Number.isFinite(x) || !Number.isFinite(y) || (grid[Math.floor(y)]?.[Math.floor(x)] ?? 1) === 1;
 function free(x, y, r = .24, grid=map) {
@@ -205,6 +221,7 @@ function shuffled(room,list){
   return result;
 }
 const safeName = v => String(v || 'OPERATIVE').replace(/[^a-zA-Z0-9 _-]/g, '').trim().slice(0, 16) || 'OPERATIVE';
+const newEncounterMetrics=()=>({damage:0,kills:0,skillUses:0,revives:0,healing:0,guardedDamage:0,overclockKills:0,machineCycles:0,staggered:0,bankHits:0,reactions:0,precisionReloads:0});
 
 function code() {
   let c;
@@ -214,9 +231,9 @@ function code() {
 function makeRoom(c) {
   const room = { code: c, players: new Map(), enemies: [], projectiles: [], drops: [], pings:[], phase: 'lobby', wave: 0,
     timer: 0, spawnLeft: 0, spawnTimer: 0, seq: 1, clock: 0, feed: [], snapshotTimer: 0,grid:map,stageIndex:0,hazardStart:0,hazardCycle:-1,
-    overtimeActive:false,machine:null,runSeed:0,seedOverride:null,layoutId:0,hostId:null,intermissionSeconds:60,
+    overtimeActive:false,protocol:null,machine:null,runSeed:0,seedOverride:null,layoutId:0,hostId:null,intermissionSeconds:60,
     encounterStart:0,pressureBand:0,order:null,salvage:0,salvageTarget:0,salvageEarned:false,
-    workOrder:null,contractCredits:0,contractStrain:0,contractBonus:false };
+    workOrder:null,contractCredits:0,contractStrain:0,contractBonus:false,lastReport:null };
   rooms.set(c, room);
   return room;
 }
@@ -232,10 +249,12 @@ function createPlayer(ws, name, room, requestedClass) {
     upgrades: {}, talents:{}, grafts:[], choices: [], weaponChoices:[], graftChoices:[], ready: false, augmentReady:false, armoryReady:true, talentReady:true,graftReady:true,graftToken:0,
     overtimeVote:null,augmentPicksRemaining:1,draftToken:0,rerolls:0,
     loadout:[weapon,null], slot:0, slotAmmo:[weapons[weapon].mag,0], damage: 1, fireRate: 1, speed: 1, armor: 0, crit: 0,
+    slotHeat:[0,0],slotVentUntil:[0,0],controlCharges:0,
     leech: 0, mag: 1, hurtAt: -100, invulnerableUntil: 0, lastDash: -100, dashUntil: 0,
     downed:false, downedUntil:0, reviveProgress:0, reviveTargetId:null, reviveIntentAt:-100, selfRevives:0,
     reconnectToken:crypto.randomBytes(24).toString('hex'),disconnected:false,reconnectUntil:0,
-    skillReadyAt: 0, skillUntil: 0, wardUntil:0, momentumUntil:0, momentumStacks:0,arcCharges:0,phaseCharges:0,reclaimerReadyAt:0 };
+    skillReadyAt: 0, skillUntil: 0, wardUntil:0, momentumUntil:0, momentumStacks:0,arcCharges:0,phaseCharges:0,reclaimerReadyAt:0,
+    encounterMetrics:newEncounterMetrics() };
   room.players.set(id, p);
   room.hostId ||= id;
   return p;
@@ -260,6 +279,8 @@ function publicPlayer(p) {
     reloadBoosted:p.reloadBoostSlot>=0&&p.reloadBoostSlot===p.slot,
     skillCooldown: Math.max(0,p.skillReadyAt-p.room.clock), skillActive: p.room.clock < p.skillUntil,
     arcCharges:p.arcCharges,phaseCharges:p.phaseCharges,reclaimerCooldown:Math.max(0,p.reclaimerReadyAt-p.room.clock),
+    heat:p.weapon==='borer'?Math.round(p.slotHeat?.[p.slot]||0):0,
+    ventRemaining:p.weapon==='borer'?Math.max(0,(p.slotVentUntil?.[p.slot]||0)-p.room.clock):0,controlCharges:p.controlCharges||0,
     slowed:p.room.clock<(p.slowUntil||0) };
 }
 function send(ws, data) { if (ws && !ws.closed) ws.send(JSON.stringify(data)); }
@@ -297,7 +318,8 @@ export function configureRunSeed(room,p,value){
   announce(room,`RUN SEED // ${room.seedOverride===null?'RANDOMIZED':String(room.seedOverride).padStart(10,'0')}`);
   return true;
 }
-const hazardCycleLength=room=>room.overtimeActive?6:8;
+const hazardProfile=room=>room.overtimeActive?activeProtocol(room):{cycle:8,warnAt:4,activeAt:5,activeEnd:7,damageScale:1,slowDuration:1.2,spawnScale:1.1};
+const hazardCycleLength=room=>hazardProfile(room).cycle;
 function overtimeTally(room){
   const living=[...room.players.values()].filter(p=>!p.dead&&!p.disconnected);
   return {yes:living.filter(p=>p.overtimeVote==='overtime').length,no:living.filter(p=>p.overtimeVote==='stable').length,eligible:living.length};
@@ -359,7 +381,7 @@ function updateRevives(room,dt){
     target.downed=false;target.hp=Math.max(30,Math.ceil(target.maxHp*.35));
     target.reviveProgress=0;target.downedUntil=0;target.invulnerableUntil=room.clock+2;
     if(self)target.selfRevives++;
-    for(const p of helpers){p.reviveTargetId=null;p.reviveIntentAt=-100;}
+    for(const p of helpers){p.reviveTargetId=null;p.reviveIntentAt=-100;if(!self&&p.encounterMetrics)p.encounterMetrics.revives++;}
     announce(room,`${target.name} // SIGNAL RESTORED${self?' (EMERGENCY REBOOT)':''}`);
     broadcastFx(room,'heal',target.x,target.y);
   }
@@ -367,14 +389,16 @@ function updateRevives(room,dt){
 function snapshot(room) {
   for(const p of room.players.values())while(p.damageHistory.length&&p.damageHistory[0].at<room.clock-5)p.damageHistory.shift();
   const hazardTime=(room.clock-room.hazardStart)%hazardCycleLength(room),overtime=overtimeTally(room);
-  const hazardWarning=room.phase==='combat'&&(room.overtimeActive?hazardTime>=2.75&&hazardTime<3.5:hazardTime>=4&&hazardTime<5);
-  const hazardActive=room.phase==='combat'&&(room.overtimeActive?hazardTime>=3.5&&hazardTime<5.35:hazardTime>=5&&hazardTime<7);
+  const profile=hazardProfile(room);
+  const hazardWarning=room.phase==='combat'&&hazardTime>=profile.warnAt&&hazardTime<profile.activeAt;
+  const hazardActive=room.phase==='combat'&&hazardTime>=profile.activeAt&&hazardTime<profile.activeEnd;
   const data = { type: 'state', phase: room.phase, wave: room.wave, stageIndex:room.stageIndex, grid:room.grid, timer: Math.max(0, room.timer),
     layoutId:room.layoutId,runSeed:room.runSeed,seedOverride:room.seedOverride??null,hostId:currentHostId(room),intermissionSeconds:room.intermissionSeconds,
     order:room.order?{id:room.order.id,name:room.order.name,detail:room.order.detail}:null,
     pressureBand:room.pressureBand||0,encounterSeconds:room.phase==='combat'?Math.floor(room.clock-(room.encounterStart??room.clock)):0,
     salvage:{count:room.salvage||0,target:room.salvageTarget||0,earned:!!room.salvageEarned},
     contract:{credits:room.contractCredits||0,strain:room.contractStrain||0,bonus:!!room.contractBonus},
+    report:room.phase==='intermission'||room.phase==='victory'?room.lastReport:null,
     workOrder:room.workOrder?{
       kind:room.workOrder.kind,name:workOrders[room.workOrder.kind].name,short:workOrders[room.workOrder.kind].short,
       detail:workOrders[room.workOrder.kind].detail,target:room.workOrder.target,
@@ -398,7 +422,7 @@ function snapshot(room) {
       marked:room.clock<(e.markedUntil||0), stunned:room.clock<(e.stunnedUntil||0), charging:room.clock<(e.chargeUntil||0), boss:!!e.boss, overdrive:!!e.overdrive,
       shielded:!!e.shielded, faceX:e.faceX||0, faceY:e.faceY||1,
       telegraph:e.telegraph?{kind:e.telegraph.kind,x:e.telegraph.x,y:e.telegraph.y,radius:e.telegraph.radius||0,remaining:Math.max(0,e.telegraph.fireAt-room.clock)}:null })),
-    projectiles: room.projectiles.map(b => ({ id:b.id, kind:b.kind, side:b.side, ownerId:b.ownerId, x:b.x, y:b.y, h:b.h, vx:b.vx, vy:b.vy, vh:b.vh, arcCharged:!!b.arcCharged,phaseCharged:!!b.phaseCharged })), drops: room.drops,
+    projectiles: room.projectiles.map(b => ({ id:b.id, kind:b.kind, side:b.side, ownerId:b.ownerId, x:b.x, y:b.y, h:b.h, vx:b.vx, vy:b.vy, vh:b.vh, arcCharged:!!b.arcCharged,phaseCharged:!!b.phaseCharged,heatHigh:!!b.heatHigh })), drops: room.drops,
     feed: room.feed, pings:(room.pings||[]).map(({id,x,y,kind,byId,name,expiresAt})=>({id,x,y,kind,byId,name,remaining:Math.max(0,expiresAt-room.clock)})), spawnLeft: room.spawnLeft,
     hazards:hazardLayouts[room.stageIndex].map((h,i)=>({...h,id:i,kind:stages[room.stageIndex].id,
       warning:hazardWarning,active:hazardActive})) };
@@ -445,13 +469,15 @@ export function startWave(room) {
   room.overtimeActive=resolveOvertimeVote(room);
   room.wave++;
   room.stageIndex=Math.floor((room.wave-1)/3)%stages.length;
+  room.protocol=selectOvertimeProtocol(room.runSeed,room.wave);
   if(room.wave%3===1)room.contractCredits=0;
   room.contractBonus=false;
   const variant=selectLayout(room.runSeed,room.wave);
-  room.layoutId=room.stageIndex*5+variant;
+  room.layoutId=room.stageIndex*bayNames.length+variant;
   room.grid=roomLayouts[room.stageIndex][variant];
   room.order=room.wave%3===0?null:selectEncounterOrder(room.runSeed,room.wave,room.stageIndex);
   room.phase = 'combat';
+  room.lastReport=null;
   room.timer = 0;
   room.encounterStart=room.clock;room.pressureBand=0;room.spawnCount=0;
   const workKind=selectWorkOrder(room.runSeed,room.wave);
@@ -461,7 +487,7 @@ export function startWave(room) {
   room.hazardStart=room.clock;room.hazardCycle=-1;
   room.machines=machineStations(room.grid,variant,room.wave,room.runSeed);
   room.machine=room.machines[0];
-  room.spawnLeft = (room.wave%3===0 ? 0 : Math.min(20,3 + room.wave * 2 + room.players.size))+(room.contractStrain||0);
+  room.spawnLeft = (room.wave%3===0 ? 0 : Math.min(20,3 + room.wave * 2 + room.players.size))+(room.contractStrain||0)+(room.overtimeActive?(room.protocol.extraEnemies||0):0);
   room.spawnTimer = room.overtimeActive?.45:.7;
   room.enemies.length = 0;
   room.projectiles.length = 0;
@@ -470,6 +496,8 @@ export function startWave(room) {
   const crewEntries=findSafeCrewSpawns(room.grid,room.players.size,room.stageIndex);
   for (const [index,p] of [...room.players.values()].entries()) {
     p.ready = false; p.choices = [];p.weaponChoices=[];p.graftChoices=[];p.overtimeVote=null;
+    p.encounterMetrics=newEncounterMetrics();
+    p.slotHeat=[0,0];p.slotVentUntil=[0,0];p.controlCharges=0;
     if (room.wave === 1) { p.hp = p.maxHp; p.dead = false; p.kills = 0; }
     else if (p.dead||p.downed) { p.dead = false; p.hp = Math.ceil(p.maxHp * .4); }
     else p.hp = Math.min(p.maxHp, p.hp + 12);
@@ -488,10 +516,13 @@ function beginRun(room) {
   room.runSeed=room.seedOverride??crypto.randomBytes(4).readUInt32LE(0);
   room.rngState=room.runSeed;
   room.overtimeActive=false;
+  room.protocol=null;
+  room.lastReport=null;
   for (const [crewIndex,p] of [...room.players.values()].entries()) {
     p.hp = 100; p.maxHp = 100; p.dead = false; p.downed=false;p.downedUntil=0;p.reviveProgress=0;p.reviveTargetId=null;p.reviveIntentAt=-100;p.selfRevives=0;
     p.weapon = classes[p.classId].weapon; p.ammo = weapons[p.weapon].mag;
     p.loadout=[p.weapon,null];p.slot=0;p.slotAmmo=[p.ammo,0];p.talents={};p.upgrades = {};p.grafts=[];p.graftChoices=[];p.graftReady=true;p.graftToken=0;p.arcCharges=0;p.phaseCharges=0;p.reclaimerReadyAt=0;p.damage = 1; p.fireRate = 1;
+    p.slotHeat=[0,0];p.slotVentUntil=[0,0];p.controlCharges=0;
     p.speed = 1; p.armor = 0; p.crit = 0; p.leech = 0; p.mag = 1;
     p.reloadEnd = 0;p.reloadWindowStart=0;p.reloadWindowEnd=0;p.reloadAttempted=false;p.reloadBoostSlot=-1;
     p.lastShot = -100; p.skillReadyAt = 0; p.skillUntil = 0;p.tauntUntil=0;p.wardUntil=0;p.momentumUntil=0;p.momentumStacks=0;
@@ -546,8 +577,12 @@ function hurt(room, p, amount) {
   const bulwark = p.classId==='vanguard' && room.clock < p.skillUntil ? .25 : 1;
   const ward=room.clock<p.wardUntil ? (p.wardStrength||.8) : 1;
   const cover=[...room.players.values()].filter(q=>q!==p&&q.classId==='vanguard'&&room.clock<q.skillUntil&&Math.hypot(q.x-p.x,q.y-p.y)<5)
-    .map(q=>q.talents?.v_bastion?.65:q.upgrades?.bulwarkPlus?.75:.85);
-  p.hp = Math.max(0, p.hp - Math.max(1, amount * (1-p.armor) * bulwark * ward * (cover.length?Math.min(...cover):1)));
+    .map(q=>({player:q,factor:q.talents?.v_bastion?.65:q.upgrades?.bulwarkPlus?.75:.85})).sort((a,b)=>a.factor-b.factor)[0];
+  const unguarded=Math.max(1,amount*(1-p.armor)*ward);
+  const actual=Math.max(1,amount*(1-p.armor)*bulwark*ward*(cover?.factor||1));
+  if(cover?.player.encounterMetrics)cover.player.encounterMetrics.guardedDamage+=Math.round(Math.max(0,unguarded*bulwark-actual));
+  if(bulwark<1&&p.encounterMetrics)p.encounterMetrics.guardedDamage+=Math.round(Math.max(0,unguarded-unguarded*bulwark));
+  p.hp = Math.max(0, p.hp - actual);
   if(p.upgrades?.ward){p.wardUntil=room.clock+2;p.wardStrength=.8;}
   p.hurtAt = room.clock;
   const operated=room.machines?.find(m=>m.session?.holderId===p.id);
@@ -568,6 +603,8 @@ function killEnemy(room, enemy, player, entries) {
   if(index<0)return;
   room.enemies.splice(index,1);
   player.kills++;
+  if(player.encounterMetrics)player.encounterMetrics.kills++;
+  if(player.encounterMetrics&&player.classId==='runner'&&room.clock<player.skillUntil)player.encounterMetrics.overclockKills++;
   if(room.phase==='combat'&&!room.salvageEarned){
     room.salvage=(room.salvage||0)+1;
     if(room.salvage>=room.salvageTarget){
@@ -632,6 +669,7 @@ export function dealDamage(room,p,enemy,raw,crit,entries){
   if(amount<=0)return;
   enemy.hp-=amount;enemy.flash=.13;
   p.damageDealt+=amount;p.damageHistory.push({at:room.clock,amount});
+  if(p.encounterMetrics)p.encounterMetrics.damage+=amount;
   const entry=entries.get(enemy.id)||{id:enemy.id,x:enemy.x,y:enemy.y,amount:0,crit:false,armored:false,marked:false,staggered:false,height:enemy.type==='mite'?1.2:enemy.boss?2.8:enemy.type==='brute'?2.3:2};
   entry.amount+=amount;entry.crit ||= crit;entry.armored ||= armored;entry.marked ||= marked;entries.set(enemy.id,entry);
   if(enemy.hp<=0)killEnemy(room,enemy,p,entries);
@@ -642,7 +680,13 @@ export function activateMachine(room,p,m=room.machine){
   if(room.phase!=='combat'||!m||m.state!=='ready'||p.dead||p.downed||p.disconnected||
      room.players.get(p.id)!==p||Math.hypot(p.x-(m.x??machineSite.x),p.y-(m.y??machineSite.y))>2.2||
      !visible(p.x,p.y,m.x??machineSite.x,m.y??machineSite.y,room.grid))return false;
-  m.state='warning';m.fireAt=room.clock+1.25;m.readyAt=room.clock+17;m.triggeredBy=p.id;m.holderId=null;m.session=null;
+  m.state='warning';m.fireAt=room.clock+1.25;m.readyAt=room.clock+(room.overtimeActive?(activeProtocol(room).machineCooldown||17):17);m.triggeredBy=p.id;m.holderId=null;m.session=null;
+  if(p.encounterMetrics)p.encounterMetrics.machineCycles++;
+  if(p.upgrades?.controlSplice)p.controlCharges=3;
+  if(p.upgrades?.serviceWard)for(const q of room.players.values())if(!q.dead&&!q.downed&&!q.disconnected&&Math.hypot(q.x-p.x,q.y-p.y)<=5){
+    q.wardStrength=q.wardUntil>room.clock?Math.min(q.wardStrength||1,.75):.75;
+    q.wardUntil=room.clock+4;
+  }
   announce(room,`${p.name} // ${activeProtocol(room).machine} ARMED · CLEAR MARKED ZONE`);
   broadcastFx(room,'machineArm',m.targetX??machineSite.targetX,m.targetY??machineSite.targetY);
   return true;
@@ -688,7 +732,7 @@ export function machineInput(room,p,action,delta=0){
   const matched=s.selector===m.sequence[s.step];
   const timed=m.mode!=='circuit'||Math.abs(s.sweep-s.zone)<.145;
   const balanced=m.mode!=='pressure'||s.lockProgress>=1.7;
-  if(!matched||!timed||!balanced){s.mistakes++;s.lockAt=room.clock+.65;s.lockProgress=0;broadcastFx(room,'machineError',m.x,m.y);return false;}
+  if(!matched||!timed||!balanced){s.mistakes++;s.lockAt=room.clock+(room.overtimeActive?(activeProtocol(room).faultLockout||.65):.65);s.lockProgress=0;broadcastFx(room,'machineError',m.x,m.y);return false;}
   s.step++;broadcastFx(room,'machineStep',m.x,m.y);
   if(s.step>=MACHINE_MODES[m.mode].steps){m.session=null;return activateMachine(room,p,m);}
   s.selector=m.mode==='pressure'?2:0;s.startedAt=room.clock;s.lockAt=room.clock+MACHINE_MODES[m.mode].lockout;
@@ -761,17 +805,25 @@ export function settleWorkOrder(room){
   if(room.contractBonus)announce(room,'SECTOR ACCOUNT SETTLED // BONUS AUGMENT DRAFT FOR THE CREW');
   return met;
 }
+export function buildEncounterReport(room){
+  const report={wave:room.wave,duration:Math.round(room.clock-(room.encounterStart??room.clock)),
+    workOrder:room.workOrder?.result||'unresolved',overtime:room.overtimeActive?activeProtocol(room).name:null,
+    salvage:!!room.salvageEarned,crew:[...room.players.values()].map(p=>({id:p.id,name:p.name,classId:p.classId,
+      ...newEncounterMetrics(),...p.encounterMetrics}))};
+  room.lastReport=report;
+  return report;
+}
 function spawnPlayerProjectile(room,p,w,angle,pitch,shot){
   const speed=w.speed*(1+.18*(p.upgrades.velocity||0)),horizontal=Math.cos(pitch)*speed;
   const talentDamage=(p.talents?.v_rounds&&['carbine','rail'].includes(p.weapon)?1.2:1)*(p.talents?.m_focus&&['pulse','arcgun'].includes(p.weapon)?1.2:1);
   const b={id:room.seq++,side:'player',kind:p.weapon,ownerId:p.id,shot,
     x:p.x,y:p.y,h:shot.originHeight,vx:Math.cos(angle)*horizontal,vy:Math.sin(angle)*horizontal,vh:Math.sin(pitch)*speed,
-    radius:w.radius,damage:w.damage*p.damage*(1+.1*(p.upgrades.velocity||0))*talentDamage*(shot.boosted?1.2:1)*(shot.phaseCharged?.8:1),rangeLeft:w.range,crit:roomRandom(room)<p.crit,
-    pierce:(w.pierce||0)+(p.upgrades.pierce||0)+(shot.phaseCharged?1:0),bounces:(w.bounces||0)+(p.upgrades.ricochet||0)+(shot.phaseCharged?1:0),bounceCount:0,hitIds:new Set(),arcCharged:!!shot.arcCharged,phaseCharged:!!shot.phaseCharged};
+    radius:shot.heatHigh?.16:w.radius,damage:w.damage*p.damage*(1+.1*(p.upgrades.velocity||0))*talentDamage*(shot.boosted?1.2:1)*(shot.phaseCharged?.8:1)*(shot.controlCharged?.8:1),rangeLeft:w.range,crit:roomRandom(room)<p.crit,
+    pierce:(w.pierce||0)+(p.upgrades.pierce||0)+(shot.phaseCharged?1:0)+(shot.controlCharged?1:0),bounces:(w.bounces||0)+(p.upgrades.ricochet||0)+(shot.phaseCharged?1:0),bounceCount:0,hitIds:new Set(),arcCharged:!!shot.arcCharged,phaseCharged:!!shot.phaseCharged,heatHigh:!!shot.heatHigh};
   room.projectiles.push(b);return b;
 }
 export function fire(room, p, aim, verticalAim = 0, height = 1.58) {
-  if (room.phase !== 'combat' || p.dead || p.downed || p.reloadEnd > 0 ||
+  if (room.phase !== 'combat' || p.dead || p.downed || p.reloadEnd > 0 ||(p.slotVentUntil?.[p.slot]||0)>room.clock ||
       room.machines?.some(m=>m.session?.holderId===p.id)||
       (p.reviveTargetId&&room.clock-p.reviveIntentAt<.3)) return;
   const w = weapons[p.weapon];
@@ -786,9 +838,16 @@ export function fire(room, p, aim, verticalAim = 0, height = 1.58) {
   const pitch = clamp(Number(verticalAim) || 0, -1.3, 1.3);
   const requested=Number(aim),baseAngle=clamp(Number.isFinite(requested)?requested:p.a,p.a-.22,p.a+.22);
   const shot={hit:false,originHeight:clamp(Number(height)||1.58,.9,2.85),arcCharged:p.arcCharges>0,phaseCharged:p.phaseCharges>0,graftProc:false,
-    boosted:p.reloadBoostSlot>=0&&p.reloadBoostSlot===p.slot};
+    boosted:p.reloadBoostSlot>=0&&p.reloadBoostSlot===p.slot,controlCharged:p.controlCharges>0,heatHigh:false};
   if(shot.arcCharged)p.arcCharges--;
   if(shot.phaseCharged)p.phaseCharges--;
+  if(shot.controlCharged)p.controlCharges--;
+  if(p.weapon==='borer'){
+    p.slotHeat||=[0,0];p.slotVentUntil||=[0,0];
+    p.slotHeat[p.slot]=Math.min(100,(p.slotHeat[p.slot]||0)+12);
+    shot.heatHigh=p.slotHeat[p.slot]>=80;
+    if(p.slotHeat[p.slot]>=100){p.slotVentUntil[p.slot]=room.clock+1.2;broadcastFx(room,'vent',p.x,p.y);}
+  }
   if(shot.boosted)p.reloadBoostSlot=-1;
   for (let i=0; i<count; i++) {
     const angle=baseAngle+(count===1?0:(i-(count-1)/2)*w.spread+(roomRandom(room)-.5)*.018);
@@ -812,6 +871,7 @@ function applyProjectileHit(room,b,p,enemy,amount,entries){
   // and four players from holding a threat permanently in stun.
   const impact=b.kind==='scatter'&&Math.hypot(enemy.x-p.x,enemy.y-p.y)<=5.5?.48:b.kind==='rail'?.68:0;
   if(amount>0&&impact&&!enemy.boss&&enemy.hp>0&&room.clock>=(enemy.staggerReadyAt||0)){
+    if(p.encounterMetrics)p.encounterMetrics.staggered++;
     enemy.stunnedUntil=Math.max(enemy.stunnedUntil||0,room.clock+impact);
     enemy.staggerReadyAt=room.clock+2.8;
     enemy.attack=Math.max(enemy.attack||0,impact);
@@ -820,6 +880,7 @@ function applyProjectileHit(room,b,p,enemy,amount,entries){
     broadcastFx(room,'stagger',enemy.x,enemy.y);
   }
   const element=weapons[b.kind]?.element;
+  if(b.kind==='borer'&&b.heatHigh&&enemy.hp>0){enemy.slowUntil=Math.max(enemy.slowUntil||0,room.clock+1.2);enemy.slowFactor=Math.min(enemy.slowFactor||1,.85);}
   if(b.arcCharged&&b.shot&&!b.shot.graftProc&&amount>0){
     b.shot.graftProc=true;
     const other=room.enemies.filter(e=>e.id!==enemy.id&&Math.hypot(e.x-enemy.x,e.y-enemy.y)<3.5&&visible(enemy.x,enemy.y,e.x,e.y,room.grid))
@@ -846,6 +907,7 @@ function applyProjectileHit(room,b,p,enemy,amount,entries){
     for(const other of others){dealDamage(room,p,other,amount*.55*(enemy.burnUntil>room.clock?1.4:1),false,entries);broadcastFx(room,'arc',other.x,other.y);}
   }
   if(enemy.burnUntil>room.clock&&enemy.toxinUntil>room.clock&&room.clock>(enemy.reactionAt||0)){
+    if(p.encounterMetrics)p.encounterMetrics.reactions++;
     enemy.reactionAt=room.clock+1.5;
     broadcastFx(room,'combustion',enemy.x,enemy.y);
     for(const other of [...room.enemies])if(Math.hypot(other.x-enemy.x,other.y-enemy.y)<2.2)
@@ -931,7 +993,13 @@ export function advanceProjectile(room,b,dt,batches){
       const frozen=enemy.slowUntil>room.clock;
       const bankBonus=1+.3*(p.upgrades.glancing||0)*Math.min(3,b.bounceCount||0);
       const amount=dealDamage(room,p,enemy,b.damage*bankBonus*(b.crit?1.8:1)*(frozen&&p.upgrades.shatter?1+.25*p.upgrades.shatter:1),b.crit,entries);
+      if(amount>0&&b.bounceCount&&p.encounterMetrics)p.encounterMetrics.bankHits++;
       applyProjectileHit(room,b,p,enemy,amount,entries);
+      if(amount>0&&b.bounceCount&&p.upgrades.bankSignal&&enemy.hp>0){
+        enemy.markedUntil=Math.max(enemy.markedUntil||0,room.clock+Math.min(6,2+p.upgrades.bankSignal));
+        enemy.markCharges=Math.max(enemy.markCharges||0,1);
+        broadcastFx(room,'tether',enemy.x,enemy.y);
+      }
       if(b.kind==='harpoon'&&enemy.hp>0){
         pullEnemyToward(room,enemy,p.x,p.y,2.2);
         enemy.markedUntil=room.clock+(p.upgrades.tetherline?4:3);
@@ -964,6 +1032,8 @@ export function reload(room,p) {
     p.reloadAttempted=true;
     if(room.clock<p.reloadWindowStart||room.clock>p.reloadWindowEnd)return false;
     p.reloadEnd=Math.min(p.reloadEnd,room.clock+.12);
+    if(p.encounterMetrics)p.encounterMetrics.precisionReloads++;
+    if(p.weapon==='borer'&&p.slotHeat){p.slotHeat[p.slot]=Math.max(0,(p.slotHeat[p.slot]||0)-30);if(p.slotVentUntil)p.slotVentUntil[p.slot]=0;}
     if(p.upgrades?.snapfreeze){
       for(const enemy of room.enemies)if(Math.hypot(enemy.x-p.x,enemy.y-p.y)<2.8+.5*(p.upgrades.snapfreeze-1)&&visible(p.x,p.y,enemy.x,enemy.y,room.grid)){
         enemy.slowUntil=Math.max(enemy.slowUntil||0,room.clock+2);enemy.slowFactor=Math.min(enemy.slowFactor||1,.5);
@@ -997,6 +1067,7 @@ export function reload(room,p) {
 }
 export function useSkill(room,p) {
   if(room.phase!=='combat'||p.dead||p.downed||room.clock<p.skillReadyAt)return;
+  if(p.encounterMetrics)p.encounterMetrics.skillUses++;
   const skill=classes[p.classId];
   p.skillReadyAt=room.clock+skill.cooldown*Math.pow(.82,p.upgrades.capacitor||0);
   if(p.grafts?.includes('arcSpine'))p.arcCharges=4;
@@ -1016,6 +1087,7 @@ export function useSkill(room,p) {
     for(const e of [...room.enemies]){
       const dx=e.x-p.x,dy=e.y-p.y,dist=Math.hypot(dx,dy);
       if(dist>5.5+1.5*(p.upgrades.shockPlus||0)||!visible(p.x,p.y,e.x,e.y,room.grid))continue;
+      if(e.telegraph&&p.encounterMetrics)p.encounterMetrics.staggered++;
       dealDamage(room,p,e,(110+25*(p.upgrades.shockPlus||0))*p.damage*(p.talents?.b_impact?1.35:1),false,damageEntries);
       if(e.hp<=0)continue;
       e.telegraph=null;e.attack=Math.max(e.attack,p.upgrades.shockPlus?2.2:1.5);
@@ -1032,9 +1104,10 @@ export function useSkill(room,p) {
       if(q.downed){
         if(distance>4.5)continue;
         q.downed=false;q.downedUntil=0;q.reviveProgress=0;q.hp=Math.max(30,Math.ceil(q.maxHp*.35));
+        if(p.encounterMetrics)p.encounterMetrics.revives++;
         q.invulnerableUntil=room.clock+2;
         announce(room,`${q.name||'CREW'} // RALLY REBOOT`);
-      }else q.hp=Math.min(q.maxHp,q.hp+45+20*(p.upgrades.rallyPlus||0)+20*(p.talents?.m_heal||0));
+      }else{const before=q.hp;q.hp=Math.min(q.maxHp,q.hp+45+20*(p.upgrades.rallyPlus||0)+20*(p.talents?.m_heal||0));if(p.encounterMetrics)p.encounterMetrics.healing+=Math.round(q.hp-before);}
       q.wardUntil=room.clock+3;q.wardStrength=p.talents?.m_barrier?.75:.85;
       if(p.upgrades.rallyPlus&&q.reloadEnd>0){
         q.reloadEnd=0;q.reloadWindowStart=0;q.reloadWindowEnd=0;q.reloadAttempted=false;
@@ -1096,6 +1169,7 @@ export function applyWeapon(p,id){
   if(!p.weaponChoices.includes(id)||p.armoryReady||!weapons[id])return false;
   const target=p.slot===0?1:0;
   p.loadout[target]=id;p.slotAmmo[target]=Math.ceil(weapons[id].mag*p.mag);
+  p.slotHeat||=[0,0];p.slotVentUntil||=[0,0];p.slotHeat[target]=0;p.slotVentUntil[target]=0;
   p.armoryReady=true;updateReady(p);
   return true;
 }
@@ -1225,6 +1299,13 @@ export function updateRoom(room,dt) {
   if(!room.players.size)return;
   if (room.phase === 'combat') {
     const damageBatches=new Map();
+    for(const p of room.players.values())if(p.slotHeat){
+      p.slotVentUntil||=[0,0];
+      for(let slot=0;slot<2;slot++){
+        if(p.slotVentUntil[slot]&&room.clock>=p.slotVentUntil[slot]){p.slotVentUntil[slot]=0;p.slotHeat[slot]=Math.min(p.slotHeat[slot]||0,35);}
+        else if(!p.slotVentUntil[slot]&&(slot!==p.slot||room.clock-p.lastShot>.18))p.slotHeat[slot]=Math.max(0,(p.slotHeat[slot]||0)-24*dt);
+      }
+    }
     updateMachine(room,dt);
     const elapsed=room.clock-(room.encounterStart??room.clock);
     const nextBand=elapsed>=60?2:elapsed>=30?1:0;
@@ -1233,18 +1314,18 @@ export function updateRoom(room,dt) {
       room.pressureBand=nextBand;
       announce(room,`PRESSURE ${nextBand}/2 // REINFORCEMENT AUTHORIZED`);
     }
-    const hazardLength=hazardCycleLength(room),cycle=Math.floor((room.clock-room.hazardStart)/hazardLength),hazardTime=(room.clock-room.hazardStart)%hazardLength;
-    if(hazardTime>=(room.overtimeActive?2.75:4)&&room.hazardCycle!==cycle){room.hazardCycle=cycle;announce(room,`${stages[room.stageIndex].subtitle} // HAZARD CHARGING`);}
-    if(room.overtimeActive?hazardTime>=3.5&&hazardTime<5.35:hazardTime>=5&&hazardTime<7){
+    const profile=hazardProfile(room),hazardLength=profile.cycle,cycle=Math.floor((room.clock-room.hazardStart)/hazardLength),hazardTime=(room.clock-room.hazardStart)%hazardLength;
+    if(hazardTime>=profile.warnAt&&room.hazardCycle!==cycle){room.hazardCycle=cycle;announce(room,`${stages[room.stageIndex].subtitle} // HAZARD CHARGING`);}
+    if(hazardTime>=profile.activeAt&&hazardTime<profile.activeEnd){
       for(const p of room.players.values())if(!p.dead&&!p.downed&&!p.disconnected&&hazardLayouts[room.stageIndex].some(h=>Math.hypot(p.x-h.x,p.y-h.y)<h.r)){
-        if(room.stageIndex===1)p.slowUntil=room.clock+(room.overtimeActive?2:1.2);
-        if(room.clock>=(p.hazardHitAt||0)){hurt(room,p,(room.stageIndex===2?14:room.stageIndex===0?10:5)*(room.overtimeActive&&room.stageIndex!==1?1.5:1));p.hazardHitAt=room.clock+.8;}
+        if(room.stageIndex===1)p.slowUntil=room.clock+(profile.slowDuration||1.2);
+        if(room.clock>=(p.hazardHitAt||0)){hurt(room,p,(room.stageIndex===2?14:room.stageIndex===0?10:5)*(profile.damageScale||1));p.hazardHitAt=room.clock+.8;}
       }
     }
     room.spawnTimer -= dt;
     if (room.spawnLeft > 0 && room.spawnTimer <= 0) {
       if(spawnEnemy(room))room.spawnLeft--;
-      room.spawnTimer=(room.overtimeActive?.7:1.1) / ((1+room.wave*.06)*(1+.16*(room.pressureBand||0)));
+      room.spawnTimer=(profile.spawnScale||1.1) / ((1+room.wave*.06)*(1+.16*(room.pressureBand||0)));
     }
     for (const e of [...room.enemies]) {
       tickEnemyEffects(room,e,damageBatches);
@@ -1408,6 +1489,7 @@ export function updateRoom(room,dt) {
       room.projectiles.length=0;
       for(const m of room.machines||[])m.session=null;
       settleWorkOrder(room);
+      buildEncounterReport(room);
       room.phase='intermission'; room.timer=room.intermissionSeconds||60;
       for (const p of room.players.values()) if (!p.dead){
         if(p.downed){p.downed=false;p.downedUntil=0;p.reviveProgress=0;p.hp=Math.ceil(p.maxHp*.4);announce(room,`${p.name} // RESTORED AT CLEAR`);}

@@ -1,8 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { spawn } from 'node:child_process';
-import { BUILD_VERSION, classes, weapons, weaponNotes, enemyIntel, enemyStats, upgrades, stages, talents, grafts, encounterOrders, workOrders, floorHeightAt } from '../public/shared.js';
-import { dealDamage, chooseOptions, rerollAugments, selectEncounterOrder, selectWorkOrder, findSafeCrewSpawns, advanceProjectile, startWave, spawnEnemy, expireDisconnectedPlayers, configureIntermission, configureRunSeed, applyWeapon, applyTalent, applyUpgrade, applyGraft, activateDash, activateMachine, requestMachineHold, startMachineSession, machineInput, settleWorkOrder, fire, reload, useSkill, placePing, requestRevive, castOvertimeVote, resolveOvertimeVote, updateRoom } from '../server.js';
+import { BUILD_VERSION, bayNames, classes, weapons, weaponNotes, enemyIntel, enemyStats, upgrades, stages, talents, grafts, encounterOrders, workOrders, floorHeightAt } from '../public/shared.js';
+import { dealDamage, chooseOptions, rerollAugments, selectEncounterOrder, selectOvertimeProtocol, selectWorkOrder, findSafeCrewSpawns, advanceProjectile, startWave, spawnEnemy, expireDisconnectedPlayers, configureIntermission, configureRunSeed, applyWeapon, applyTalent, applyUpgrade, applyGraft, activateDash, activateMachine, requestMachineHold, startMachineSession, machineInput, settleWorkOrder, buildEncounterReport, fire, reload, useSkill, placePing, requestRevive, castOvertimeVote, resolveOvertimeVote, updateRoom } from '../server.js';
 
 test('pulse bolts pierce two targets and a ricochet reverses a wall impact', () => {
   const player={id:'p',ws:{send(){}},classId:'medic',upgrades:{},damageDealt:0,damageHistory:[],hits:0,kills:0,leech:0};
@@ -756,7 +756,8 @@ function encounterWithVariant(wanted){
 }
 
 test('authored bays offer three easy stations, two circuit stations, or one hard pressure station', () => {
-  for(const [variant,count,mode] of [[0,3,'valves'],[1,2,'circuit'],[2,1,'pressure'],[3,3,'valves'],[4,2,'circuit']]){
+  assert.equal(bayNames.length,7);
+  for(const [variant,count,mode] of [[0,3,'valves'],[1,2,'circuit'],[2,1,'pressure'],[3,3,'valves'],[4,2,'circuit'],[5,1,'pressure'],[6,3,'valves']]){
     const {room}=encounterWithVariant(variant);
     assert.equal(room.machines.length,count);
     assert.ok(room.machines.every(m=>m.mode===mode));
@@ -768,6 +769,98 @@ test('authored bays offer three easy stations, two circuit stations, or one hard
     assert.ok(room.grid.flat().includes(2),'the bay has low cover');
     assert.ok(room.grid.flat().includes(3),'the bay has a raised deck');
   }
+});
+
+test('every named bay admits four separated crew and reachable clear-floor controls', () => {
+  for(let variant=0;variant<bayNames.length;variant++){
+    const seed=encounterWithVariant(variant).room.runSeed;
+    const players=new Map(Array.from({length:4},(_,i)=>[String(i),{id:String(i),name:`CREW ${i}`,classId:'vanguard',
+      x:12.5,y:12.5,hp:100,maxHp:100,dead:false,downed:false,disconnected:false,
+      upgrades:{},talents:{},loadout:['carbine',null],ws:{send(){}}}]));
+    const room={phase:'intermission',clock:1,wave:1,runSeed:seed,players,
+      enemies:[],projectiles:[],drops:[],feed:[],seq:1};
+    startWave(room);
+    assert.equal(room.layoutId,variant);
+    const crew=[...players.values()];
+    for(const p of crew){
+      assert.equal(room.grid[Math.floor(p.y)][Math.floor(p.x)],0,`${bayNames[variant]} entry must be open`);
+      for(const m of room.machines)assert.ok(Math.hypot(p.x-m.x,p.y-m.y)>.8,'crew entry must clear controls');
+    }
+    for(let i=0;i<crew.length;i++)for(let j=i+1;j<crew.length;j++)
+      assert.ok(Math.hypot(crew[i].x-crew[j].x,crew[i].y-crew[j].y)>=1.35);
+  }
+});
+
+test('overtime exposes two seeded conditions per sector with declared mechanical costs', () => {
+  for(const wave of [2,4,7]){
+    const selected=new Set();
+    for(let seed=1;seed<=24;seed++){
+      const protocol=selectOvertimeProtocol(seed,wave);
+      assert.equal(protocol.stage,Math.floor((wave-1)/3));
+      assert.equal(selectOvertimeProtocol(seed,wave).id,protocol.id);
+      assert.ok(protocol.hazard.length>60&&protocol.reward.includes('extra augment'));
+      assert.ok(protocol.cycle>=6&&protocol.warnAt<protocol.activeAt&&protocol.activeAt<protocol.activeEnd);
+      selected.add(protocol.id);
+    }
+    assert.equal(selected.size,2,'each sector must offer distinct vote conditions across seeds');
+  }
+});
+
+test('Thermal Borer vents after sustained fire and a precision reload removes heat', () => {
+  const p={id:'p',name:'CREW',ws:{send(){}},classId:'vanguard',x:12.5,y:12.5,a:0,hp:100,maxHp:100,dead:false,downed:false,
+    weapon:'borer',ammo:24,mag:1,slot:0,slotAmmo:[24,0],slotHeat:[0,0],slotVentUntil:[0,0],fireRate:1,damage:1,crit:0,
+    upgrades:{},talents:{},grafts:[],lastShot:-100,shots:0,hits:0,kills:0,damageDealt:0,damageHistory:[],leech:0};
+  const room={phase:'combat',clock:1,wave:1,stageIndex:0,players:new Map([['p',p]]),enemies:[],projectiles:[],drops:[],feed:[],seq:1,
+    hazardStart:1,hazardCycle:-1,spawnLeft:1,spawnTimer:999,snapshotTimer:999};p.room=room;
+  for(let i=0;i<9;i++){room.clock=1+i*.13;fire(room,p,0);}
+  assert.equal(room.projectiles.length,9);
+  assert.equal(p.slotHeat[0],100);
+  assert.ok(p.slotVentUntil[0]>room.clock);
+  assert.equal(room.projectiles.at(-1).heatHigh,true);
+  room.clock+=.13;fire(room,p,0);assert.equal(room.projectiles.length,9,'vent blocks the next trigger');
+  room.clock=p.slotVentUntil[0];updateRoom(room,0);
+  assert.equal(p.slotHeat[0],35);
+  room.clock+=.13;fire(room,p,0);assert.equal(room.projectiles.length,10);
+  room.clock+=.2;assert.equal(reload(room,p),true);
+  room.clock=p.reloadWindowStart+.01;assert.equal(reload(room,p),true);
+  assert.ok(p.slotHeat[0]<=17,'precision reload vents 30 heat');
+});
+
+test('machine augments prime three tradeoff shots and protect nearby crew', () => {
+  const ws={send(){}},p={id:'p',name:'TECH',ws,classId:'vanguard',x:12.5,y:8.5,a:0,hp:100,maxHp:100,dead:false,downed:false,
+    weapon:'carbine',ammo:24,mag:1,slot:0,slotAmmo:[24,0],fireRate:1,damage:1,crit:0,lastShot:-100,shots:0,
+    upgrades:{controlSplice:1,serviceWard:1},talents:{},grafts:[],damageDealt:0,damageHistory:[],kills:0,hits:0};
+  const q={id:'q',name:'ALLY',ws,classId:'medic',x:13.5,y:8.5,hp:100,maxHp:100,dead:false,downed:false};
+  const machine={id:0,state:'ready',x:12.5,y:7.5,targetX:12.5,targetY:12.5,radius:3.2};
+  const room={phase:'combat',clock:1,wave:2,stageIndex:0,players:new Map([['p',p],['q',q]]),enemies:[],projectiles:[],drops:[],feed:[],seq:1,
+    machine,machines:[machine]};p.room=q.room=room;
+  assert.equal(activateMachine(room,p,machine),true);
+  assert.equal(p.controlCharges,3);
+  assert.equal(q.wardStrength,.75);
+  assert.equal(q.wardUntil,5);
+  fire(room,p,0);
+  assert.equal(p.controlCharges,2);
+  assert.equal(room.projectiles[0].pierce,1);
+  assert.equal(room.projectiles[0].damage,weapons.carbine.damage*.8);
+});
+
+test('banked hit marks a target for a teammate and incident report retains credited actions', () => {
+  const p={id:'p',name:'SCOUT',ws:{send(){}},classId:'vanguard',x:12.5,y:12.5,hp:100,maxHp:100,dead:false,downed:false,
+    upgrades:{bankSignal:1},talents:{},grafts:[],damageDealt:0,damageHistory:[],kills:0,hits:0,crit:0,
+    encounterMetrics:{damage:0,kills:0,skillUses:1,revives:0,healing:0,guardedDamage:0,overclockKills:0,machineCycles:1,staggered:0,bankHits:0,reactions:0,precisionReloads:0}};
+  const enemy={id:1,type:'brute',x:13.5,y:12.5,hp:200,maxHp:200};
+  const room={phase:'combat',clock:1,encounterStart:0,wave:2,stageIndex:0,players:new Map([['p',p]]),enemies:[enemy],projectiles:[],drops:[],feed:[],seq:2,
+    workOrder:{result:'paid'},salvageEarned:true,overtimeActive:false};p.room=room;
+  const bolt={side:'player',kind:'carbine',ownerId:'p',shot:{hit:false},x:12.5,y:12.5,h:1.58,vx:38,vy:0,vh:0,
+    radius:.09,damage:18,rangeLeft:22,crit:false,pierce:0,bounces:0,bounceCount:1,hitIds:new Set()};
+  assert.equal(advanceProjectile(room,bolt,1/60,new Map()),false);
+  assert.equal(enemy.markCharges,1);
+  assert.ok(enemy.markedUntil>room.clock);
+  const report=buildEncounterReport(room);
+  assert.equal(report.crew[0].bankHits,1);
+  assert.equal(report.crew[0].machineCycles,1);
+  assert.equal(report.crew[0].damage,18);
+  assert.equal(report.workOrder,'paid');
 });
 
 test('valve cascade requires several deliberate inputs and circuit and pressure rejects blind commits', () => {

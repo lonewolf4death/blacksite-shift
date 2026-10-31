@@ -41,6 +41,8 @@
 .contract-ledger>div{min-width:0;display:flex;flex-direction:column;gap:4px;padding:11px 13px;background:linear-gradient(125deg,#2b2c22,#171d19)}
 .contract-ledger small{font-size:9px;letter-spacing:.12em;color:#d0a972}.contract-ledger strong{font:800 21px/1 'Barlow Condensed',Impact,sans-serif;color:#f2dfbb;letter-spacing:.04em}.contract-ledger span{font-size:9px;line-height:1.35;color:#b8bea9}
 .contract-ledger .paid{color:#d6ec53}.contract-ledger .missed{color:#ff9677}
+.heat-hud{color:#f0bd82}.heat-hud.venting{color:#ff8265}
+.encounter-report{display:grid;grid-template-columns:1.4fr 1fr 1.2fr;gap:14px;margin:10px 0 0;padding:12px 14px;background:#151d19;border:1px solid #536454;box-shadow:inset 3px 0 #a6bd85;color:#c9d6c2}.encounter-report>div{min-width:0}.encounter-report small{display:block;color:#9cac8b;font-size:8px;letter-spacing:.12em}.encounter-report strong{display:block;margin:4px 0;font:800 20px/1 'Barlow Condensed',Impact,sans-serif;color:#f0e9cf}.encounter-report span{display:block;font-size:9px;line-height:1.45}.report-metrics{display:flex;align-content:center;align-items:center;flex-wrap:wrap;gap:5px}.report-metrics b{padding:5px 7px;border:1px solid #566b56;background:#253229;color:#dce9c9;font-size:9px;font-weight:500}.report-crew{border-left:1px solid #435143;padding-left:13px}.report-crew span{margin:0 0 3px;color:#aebfae}
 .machine-hint{min-width:260px}.machine-progress{height:3px;margin-top:6px;background:#35402e;overflow:hidden}.machine-progress i{display:block;width:0;height:100%;background:#e0ed8c;box-shadow:0 0 9px #dcf16e;transition:width .08s linear}
 .machine-console{position:absolute;z-index:16;left:50%;top:53%;transform:translate(-50%,-50%);width:min(520px,88vw);padding:0 23px 18px;background:#111915f2;border:2px solid #a49b70;box-shadow:0 0 0 5px #111a15b8,0 25px 90px #000d;color:#dce5c7;pointer-events:none;text-align:left}
 .machine-console-top{display:flex;justify-content:space-between;gap:10px;margin:0 -23px 14px;padding:9px 23px;background:#303c31;border-bottom:1px solid #7e896a;font-size:9px;letter-spacing:.1em;color:#ceddb6}.machine-console-top strong{color:#f5c082}
@@ -53,6 +55,7 @@
 @media(max-width:700px){.machine-console{top:49%;padding:0 14px 12px}.machine-console-top{margin:0 -14px 10px;padding:8px 14px}.machine-console h2{font-size:32px}.machine-channels span{height:45px}}
 .reduce-flashes #grain{opacity:.12}.reduce-flashes #hurt-flash{opacity:.18}.reduce-flashes .danger-cue,.reduce-flashes .reload-window{animation:none}
 @media(max-width:700px){.contract-ledger{grid-template-columns:1fr 1fr}.contract-ledger>div:first-child{grid-column:1/3}.contract-ledger strong{font-size:18px}}
+@media(max-width:700px){.encounter-report{grid-template-columns:1fr}.report-crew{border-left:0;border-top:1px solid #435143;padding:7px 0 0}}
 
 .manual-inline{margin:3px 0 10px;padding:7px 0;background:none;border:0;color:#c4d49e;font-size:10px;letter-spacing:.09em;text-align:left}.manual-inline:hover{color:var(--acid)}
 .manual-panel{width:min(920px,95vw);height:min(780px,92vh);display:flex;flex-direction:column;background:#141a18;border-color:#67736b;box-shadow:0 30px 120px #000e;pointer-events:auto}
