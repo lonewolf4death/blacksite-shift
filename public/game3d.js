@@ -412,6 +412,10 @@ function updateUI(){
   lastReloadWindow=reloadWindow;
   $('reload-label').textContent=reloadWindow?'R NOW · PRECISION RELOAD':p.reloading&&!p.reloadAttempted?`R AGAIN IN ${p.reloadWindowIn.toFixed(1)}S`:p.reloading?'RELOADING...':p.reloadBoosted?'CHARGED ROUND · +20% DAMAGE':'R RELOAD · UNLIMITED RESERVE';
   $('reload-label').classList.toggle('reload-window',reloadWindow);
+  const reloadCue=$('reload-cue');
+  reloadCue.classList.toggle('hidden',!p.reloading||state.phase!=='combat');
+  reloadCue.classList.toggle('ready',reloadWindow);
+  reloadCue.textContent=reloadWindow?'R NOW · PRECISION':p.reloadAttempted?'NORMAL RELOAD':p.reloadWindowIn>0?`R IN ${p.reloadWindowIn.toFixed(1)}S`:'RELOADING';
   $('skill-label').textContent=`E ${classes[p.classId].skill} ${p.skillCooldown>0?`${p.skillCooldown.toFixed(1)}s`:p.skillActive?'ACTIVE':'READY'}`;
   $('skill-label').classList.toggle('cooling',p.skillCooldown>0&&!p.skillActive);
   const installed=(p.grafts||[]).map(id=>id==='arcSpine'?`ϟ ARC SPINE ${p.arcCharges||0} CHARGES`:id==='kineticRig'?'◇ KINETIC RIG':id==='phaseCoupler'?`⟐ PHASE ${p.phaseCharges||0} SHOTS`:id==='siphonHalo'?'◎ SIPHON · R RELOAD NEAR ENEMIES':`✚ RECLAIMER ${p.reclaimerCooldown>0?p.reclaimerCooldown.toFixed(1)+'s':'READY'}`);

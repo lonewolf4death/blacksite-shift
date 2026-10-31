@@ -17,5 +17,6 @@
 @media(max-width:700px){.boss-bar{top:82px;width:55vw}.boss-bar span{max-width:75px;overflow:hidden;text-overflow:ellipsis}.wave-intro strong{font-size:42px}}
 .wave-intro #intro-configuration{margin-top:7px;padding:5px 10px;border:1px solid #9caa67;background:#101810d9;color:#f2d28c;letter-spacing:.12em;white-space:nowrap}
 @media(max-width:700px){.wave-intro #intro-configuration{max-width:calc(100vw - 24px);white-space:normal;overflow:visible;text-align:center;font-size:8px}}
+.reload-cue{position:absolute;left:50%;top:calc(50% + 61px);transform:translateX(-50%);padding:5px 9px;border:1px solid #9caa67;background:#101810de;color:#d9dbb9;font:700 9px 'DM Mono',Consolas,monospace;letter-spacing:.1em;white-space:nowrap;text-shadow:0 1px 4px #000;pointer-events:none}.reload-cue.ready{border-color:#f2d28c;color:#ffdc94;background:#33210fe8}
 .hitmarker.armored{color:#a6dce5;text-shadow:0 0 14px #5c9daf}.hitmarker.marked{color:#f8d79b;text-shadow:0 0 14px #d6a758}.hitmarker.critical{color:#ffad73;text-shadow:0 0 14px #f76642}
 .hitmarker.staggered{color:#ffd394;text-shadow:0 0 16px #ee9f53;transform:translate(-50%,-50%) scale(1.2)}
