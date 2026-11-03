@@ -4,9 +4,9 @@ A playable 3D first person co-op roguelite shooter. Fight through three hostile 
 
 ## Play on Windows
 
-Download and extract the [v0.22.0 Windows ZIP](https://github.com/lonewolf4death/blacksite-shift/releases/download/v0.22.0/BLACKSITE.SHIFT.v0.22.0.Windows.zip), then open `BLACKSITE SHIFT-win32-x64/BLACKSITE SHIFT.exe` inside the extracted folder. Keep that complete folder together; the executable needs its bundled runtime and game files. It starts its own multiplayer server, so Node.js and a separate browser are unnecessary. If a previous launch is still open, close it before starting the extracted copy.
+Download and extract the [v0.25.0 Windows ZIP](https://github.com/lonewolf4death/blacksite-shift/releases/download/v0.25.0/BLACKSITE.SHIFT.v0.25.0.Windows.zip), then open `BLACKSITE SHIFT-win32-x64/BLACKSITE SHIFT.exe` inside the extracted folder. Keep that complete folder together; the executable needs its bundled runtime and game files. It starts its own multiplayer server, so Node.js and a separate browser are unnecessary. If a previous launch is still open, close it before starting the extracted copy.
 
-The source tree is at **v0.25.0**. The linked v0.22.0 ZIP is the latest published release; build the source locally for the new content until a newer ZIP is published.
+The source tree and Windows download are both **v0.25.0**. The ZIP's SHA-256 is `1BF25BFB3FCB69C05FA2DFA146A97CB268ADB931930048FE1982AE79475D706D`.
 
 For solo play, select **Solo Run**. To host co-op, select **Create Squad** and share the room code plus your computer's LAN IP address with your friends. They can run their own copy of the same version of the executable, enter the room code and your IP address with port `3000` in **Host IP:Port**, then select **Join Squad**. Your firewall may need to allow the game on private networks. Internet play requires a reachable host or port forwarding; there is no matchmaking yet.
 
