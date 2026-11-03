@@ -6,7 +6,7 @@ A playable 3D first person co-op roguelite shooter. Fight through three hostile 
 
 Download and extract the [v0.22.0 Windows ZIP](https://github.com/lonewolf4death/blacksite-shift/releases/download/v0.22.0/BLACKSITE.SHIFT.v0.22.0.Windows.zip), then open `BLACKSITE SHIFT-win32-x64/BLACKSITE SHIFT.exe` inside the extracted folder. Keep that complete folder together; the executable needs its bundled runtime and game files. It starts its own multiplayer server, so Node.js and a separate browser are unnecessary. If a previous launch is still open, close it before starting the extracted copy.
 
-The source tree is at **v0.24.0**. The linked v0.22.0 ZIP is the latest published release; build the source locally for the new content until a newer ZIP is published.
+The source tree is at **v0.25.0**. The linked v0.22.0 ZIP is the latest published release; build the source locally for the new content until a newer ZIP is published.
 
 For solo play, select **Solo Run**. To host co-op, select **Create Squad** and share the room code plus your computer's LAN IP address with your friends. They can run their own copy of the same version of the executable, enter the room code and your IP address with port `3000` in **Host IP:Port**, then select **Join Squad**. Your firewall may need to allow the game on private networks. Internet play requires a reachable host or port forwarding; there is no matchmaking yet.
 
@@ -59,7 +59,7 @@ Click the game view to lock the cursor after a run starts.
 - Machine calibration uses three distinct live tasks: route a three-valve sequence, bridge circuits in a moving timing window, or balance pressure against automatic drift for four seals. The operator uses A/D and Space while teammates cover them; combat never pauses. The 3D controls, lamps, HUD panel, warnings, and cycle sounds show each station's state.
 - Settings include Reduced Flashing Lights while preserving danger warnings. Research and implementation notes are in [`planning/CLOVERPIT_DEEP_DIVE.md`](<planning/CLOVERPIT_DEEP_DIVE.md>).
 - Ten enemy roles plus three bosses: flanking chargers, long-range snipers, healers, ranged gunners, mites, brutes, frontal-shield sentinels, marked-zone sappers, Foundry welders, and Cryolab purgers
-- 40 augments, including elemental effects, chain lightning, kill explosions, bonus shots, blast amplification, bank-shot damage, harpoon marks, gravity control, precision-reload freezing, class-skill freezing, and class signature upgrades
+- 41 augments, including elemental effects, chain lightning, kill explosions, bonus shots, blast amplification, bank-shot damage, harpoon marks, gravity control, precision-reload freezing, dash-primed Hotline Feed, class-skill freezing, and class signature upgrades
 - Bank Signal turns a ricochet into a crew damage mark; Control Splice turns machine calibration into three penetrating shots; Service Ward makes calibration grant a short nearby crew guard
 - Four class talent trees with three branches and two tiers each, for 24 class-specific nodes
 - Fire, frost, toxin, and shock interactions; poison plus burn can detonate, frozen enemies can shatter, and electricity chains through groups
@@ -83,7 +83,7 @@ Click the game view to lock the cursor after a run starts.
 - More decisive class skills on longer cooldowns: Vanguard draws fire under 75% protection, Breacher interrupts and displaces a group, Runner refills and resets dash while Overclocked, and Medic heals or revives nearby crew
 - Toggle Sprint joins the sensitivity, FOV, view-bob, and visual intensity settings for a more comfortable movement setup
 - Every wave entry chooses validated, separated crew positions and the client snaps its predicted position to that entry, including sector changes; the entry brief names the selected bay and machine station setup
-- In-game field manual catalogs thirteen weapons, elemental reactions, 40 augments, 24 talents, five grafts, four skills, and thirteen hostile types
+- In-game field manual catalogs thirteen weapons, elemental reactions, 41 augments, 24 talents, five grafts, four skills, and thirteen hostile types
 - Host-selected 30, 60, or 120 second service decision window with clear automatic departure and a two-second early countdown once all living crew have selected and voted
 
 See [GAME_GUIDE.md](GAME_GUIDE.md) for the content roster, [planning/MACHINES_AND_BAYS.md](planning/MACHINES_AND_BAYS.md) for the controls and geometry, [planning/IMPLEMENTATION_0.23.md](planning/IMPLEMENTATION_0.23.md) for the changes drawn from all deep dives, and [planning/REFERENCE_DEVELOPMENT.md](planning/REFERENCE_DEVELOPMENT.md) for earlier source-by-source work. The detailed reference studies cover [CloverPit](planning/CLOVERPIT_DEEP_DIVE.md), [Lethal Company](planning/LETHAL_COMPANY_DEEP_DIVE.md), [Deadzone: Rogue](planning/DEADZONE_ROGUE_DEEP_DIVE.md), [Risk of Rain (2013)](planning/RISK_OF_RAIN_2013_DEEP_DIVE.md), [Risk of Rain 2](planning/RISK_OF_RAIN_2_DEEP_DIVE.md), [Gunfire Reborn](planning/GUNFIRE_REBORN_DEEP_DIVE.md), [Megabonk](planning/MEGABONK_DEEP_DIVE.md), and [SYNTHETIK: Legion Rising](planning/SYNTHETIK_DEEP_DIVE.md). The original [BLACKSITE SHIFT research and production plan](planning/PRODUCTION_PLAN.md) remains the governing design brief.

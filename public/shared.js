@@ -1,4 +1,4 @@
-export const BUILD_VERSION = '0.24.0';
+export const BUILD_VERSION = '0.25.0';
 export const bayNames = ['INTAKE FLOOR','CROSSFLOW','SPLIT PRESS','OFFSET CHUTE','SERVICE GANTRY','FILTER STACK','REJECTED GOODS'];
 
 // Tile 3 is a low, walkable equipment deck. Its outer half-tile slopes up so
@@ -192,6 +192,7 @@ export const upgrades = [
   { id:'mirror', name:'MIRROR FEED', detail:'Every fourth trigger fires two extra projectiles at ±0.11 rad. Extra stacks shorten the cycle, minimum every second trigger.', kind:'PROJECTILE', rarity:'RARE', icon:'⫷' },
   { id:'velocity', name:'KINETIC SLUG', detail:'+18% projectile speed and +10% damage.', kind:'WEAPON', rarity:'COMMON', icon:'➜' },
   { id:'quickhands', name:'QUICK HANDS', detail:'Reload 30% faster.', kind:'WEAPON', rarity:'COMMON', icon:'↻' },
+  { id:'hotline', name:'HOTLINE FEED', detail:'After each dash, your next 3 trigger pulls launch projectiles 15% faster with 30% tighter horizontal and vertical spread. Dashing refreshes the 3 charges. Reloads take 20% longer. One installation per run.', kind:'RELOAD', rarity:'RARE', unique:true, icon:'➜' },
   { id:'medkit', name:'COMBAT TRIAGE', detail:'Health pickups heal 20 extra.', kind:'SURVIVAL', rarity:'COMMON', icon:'✚' },
   { id:'scavenger', name:'SCAVENGER', detail:'Each stack adds 8 percentage points to the chance that a kill drops health.', kind:'SURVIVAL', rarity:'COMMON', icon:'◇' },
   { id:'blast', name:'BLAST JACKET', detail:'Mortar and gravity canister blast damage and radius each gain 30% per stack.', kind:'EXPLOSIVE', rarity:'RARE', icon:'✦' },

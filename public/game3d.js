@@ -18,7 +18,7 @@ let keys={},mouseDown=false,mouseRight=false,fallbackAim=false,settingsOpen=fals
 let velocity={x:0,y:0},jumpHeight=0,jumpVelocity=0,grounded=true,eyeHeight=1.65;
 let dashUntil=0,lastDash=-100,slideUntil=0,lastSlide=-100,landingKick=0;
 let recoil=0,aimKick=0,muzzle=0,bob=0,shake=0,lastMove=0,lastFire=0,lastFrame=performance.now();
-let lastReloadWindow=false;
+let lastReloadWindow=false,lastReloadState=false;
 const recoilProfiles={carbine:[.022,.16],scatter:[.115,.38],smg:[.017,.11],pulse:[.062,.3],rail:[.12,.4],launcher:[.09,.34],arcgun:[.024,.14],cryo:[.033,.2],saw:[.055,.26],burst:[.046,.28],harpoon:[.105,.37],gravity:[.08,.32],borer:[.031,.19]};
 const visualRecoil={carbine:.32,scatter:.72,smg:.22,pulse:.48,rail:.68,launcher:.56,arcgun:.3,cryo:.34,saw:.46,burst:.38,harpoon:.62,gravity:.55,borer:.36};
 let lastReviveSend=0;
@@ -456,16 +456,21 @@ function updateUI(){
   $('heat-hud').textContent=p.ventRemaining>0?`VENTING · ${p.ventRemaining.toFixed(1)}S`:`HEAT ${p.heat||0} / 100 · ${p.heat>=80?'CONTROL BAND':'R PRECISION VENTS 30'}`;
   $('control-hud').classList.toggle('hidden',!p.controlCharges);
   $('control-hud').textContent=`CONTROL SPLICE · ${p.controlCharges||0} SHOTS · +1 PIERCE / −20% DAMAGE`;
+  $('hotline-hud').classList.toggle('hidden',!p.hotlineCharges);
+  $('hotline-hud').textContent=`HOTLINE · ${p.hotlineCharges||0} SHOTS · +15% VELOCITY / TIGHTER SPREAD`;
   $('secondary-weapon').textContent=`${p.slot===0?'1 ACTIVE':'1 '+(weapons[p.loadout[0]]?.name||'EMPTY')} · ${p.slot===1?'2 ACTIVE':'2 '+(weapons[p.loadout[1]]?.name||'EMPTY')}`;
   const reloadWindow=p.reloading&&!p.reloadAttempted&&p.reloadWindowIn<=0&&p.reloadWindowLeft>0;
   if(reloadWindow&&!lastReloadWindow&&state.phase==='combat')sound(980,.08,.035,'triangle');
+  if(lastReloadState&&!p.reloading&&state.phase==='combat')sound(p.weapon==='scatter'?185:p.weapon==='rail'?340:p.weapon==='borer'?260:285,.075,.018,'square');
   lastReloadWindow=reloadWindow;
+  lastReloadState=p.reloading;
   $('reload-label').textContent=reloadWindow?'R NOW · PRECISION RELOAD':p.reloading&&!p.reloadAttempted?`R AGAIN IN ${p.reloadWindowIn.toFixed(1)}S`:p.reloading?'RELOADING...':p.reloadBoosted?'CHARGED ROUND · +20% DAMAGE':'R RELOAD · UNLIMITED RESERVE';
   $('reload-label').classList.toggle('reload-window',reloadWindow);
   const reloadCue=$('reload-cue');
-  reloadCue.classList.toggle('hidden',!p.reloading||state.phase!=='combat');
   reloadCue.classList.toggle('ready',reloadWindow);
-  reloadCue.textContent=reloadWindow?'R NOW · PRECISION':p.reloadAttempted?'NORMAL RELOAD':p.reloadWindowIn>0?`R IN ${p.reloadWindowIn.toFixed(1)}S`:'RELOADING';
+  reloadCue.classList.toggle('missed',!!p.reloadAttempted);
+  $('reload-needle').style.left=`calc(${Math.round(clamp(p.reloadProgress||0,0,1)*100)}% - 1px)`;
+  $('reload-cue-label').textContent=reloadWindow?'R · PRECISION':p.reloadAttempted?'RELOADING':p.reloadWindowIn>0?'R · TIME THE PRESS':'RELOADING';
   $('skill-label').textContent=`E ${classes[p.classId].skill} ${p.skillCooldown>0?`${p.skillCooldown.toFixed(1)}s`:p.skillActive?'ACTIVE':'READY'}`;
   $('skill-label').classList.toggle('cooling',p.skillCooldown>0&&!p.skillActive);
   const installed=(p.grafts||[]).map(id=>id==='arcSpine'?`ϟ ARC SPINE ${p.arcCharges||0} CHARGES`:id==='kineticRig'?'◇ KINETIC RIG':id==='phaseCoupler'?`⟐ PHASE ${p.phaseCharges||0} SHOTS`:id==='siphonHalo'?'◎ SIPHON · R RELOAD NEAR ENEMIES':`✚ RECLAIMER ${p.reclaimerCooldown>0?p.reclaimerCooldown.toFixed(1)+'s':'READY'}`);
@@ -489,6 +494,7 @@ function updateUI(){
   const hazard=state.phase==='combat'?state.hazards?.find(h=>(h.warning||h.active)&&Math.hypot(h.x-p.x,h.y-p.y)<h.r+.3):null;
   const machineDanger=state.phase==='combat'&&state.machines?.some(m=>m.state==='warning'&&Math.hypot(m.targetX-p.x,m.targetY-p.y)<m.radius+.5);
   $('danger-cue').classList.toggle('hidden',!lock&&!hazard&&!machineDanger);
+  reloadCue.classList.toggle('hidden',!p.reloading||state.phase!=='combat'||!!lock||!!hazard||!!machineDanger);
   if(lock||hazard||machineDanger)$('danger-cue').textContent=lock?(lock.telegraph.kind==='charge'?'RAM CHARGE · LEAVE THE LINE':lock.telegraph.kind==='slam'?'BRUTE SLAM · CLEAR THE RING':lock.telegraph.kind==='blast'?'SAPPER BLAST · CLEAR MARKED ZONE':lock.telegraph.kind==='press'?lock.type==='overseer'?'REACTOR PRESS · CLEAR THE MARK':'WARDEN PRESS · CLEAR THE MARK':lock.telegraph.kind==='beam'?lock.type==='warden'?'WARDEN SHEAR · LEAVE THE STRIP':lock.type==='matriarch'?'COOLANT LANCE · LEAVE THE STRIP':lock.boss?'OVERSEER CUT · LEAVE THE STRIP':'WELDER CUT · LEAVE THE STRIP':lock.telegraph.kind==='coldPulse'?lock.boss?'MATRIARCH PURGE · CLEAR THE RING':'COOLANT PULSE · CLEAR THE RING':lock.telegraph.kind==='snipe'?'SNIPER LOCK':'BOSS VOLLEY'):machineDanger?'MACHINE CYCLE · CLEAR CENTER':(hazard.active?'MOVE OUT OF HAZARD':state.overtime?.active?'OVERTIME HAZARD CHARGING':'FLOOR HAZARD CHARGING');
   const session=operating();
   const nearbyDocket=state.phase==='combat'&&state.docket?.state==='available'&&!p.dead&&!p.downed&&docketInReach();
@@ -505,6 +511,7 @@ function updateUI(){
     $('machine-progress-fill').style.width=`${m.operatorId?Math.round(m.step/m.steps*100):0}%`;
   }
   $('machine-console').classList.toggle('hidden',!session);
+  if(session)reloadCue.classList.add('hidden');
   $('crosshair').classList.toggle('hidden',!!session);
   if(session){
     $('console-station').textContent=`STATION 0${session.id+1} · ${state.machines.length} ONLINE`;

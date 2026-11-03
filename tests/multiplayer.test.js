@@ -551,6 +551,29 @@ test('precision reload rewards the timed second press while an early miss finish
   assert.equal(p.reloadBoostSlot,-1,'charged shot is consumed once per trigger pull');
 });
 
+test('Hotline Feed turns a dash into three tighter, faster volleys at a reload cost', () => {
+  const p={id:'p',name:'RUNNER',ws:{send(){}},classId:'runner',x:12.5,y:12.5,a:0,hp:100,maxHp:100,dead:false,downed:false,
+    weapon:'scatter',ammo:weapons.scatter.mag,mag:1,slot:0,slotAmmo:[weapons.scatter.mag,0],loadout:['scatter',null],
+    reloadEnd:0,reloadBoostSlot:-1,damage:1,fireRate:1,crit:0,lastShot:-100,lastDash:-100,shots:0,
+    damageHistory:[],upgrades:{hotline:1},talents:{},grafts:[],hotlineCharges:0};
+  const room={clock:0,phase:'combat',wave:1,stageIndex:0,players:new Map([['p',p]]),enemies:[],projectiles:[],drops:[],feed:[],pings:[],seq:1,rngState:123};p.room=room;
+  assert.equal(activateDash(room,p),true);
+  assert.equal(p.hotlineCharges,3);
+  p.hotlineCharges=0;fire(room,p,0);
+  const ordinary=room.projectiles[0],ordinaryAngle=Math.atan2(ordinary.vy,ordinary.vx),ordinarySpeed=Math.hypot(ordinary.vx,ordinary.vy,ordinary.vh);
+  room.projectiles=[];room.rngState=123;p.lastShot=-100;p.ammo=weapons.scatter.mag;p.hotlineCharges=3;
+  fire(room,p,0);
+  const primed=room.projectiles[0],primedAngle=Math.atan2(primed.vy,primed.vx),primedSpeed=Math.hypot(primed.vx,primed.vy,primed.vh);
+  assert.ok(Math.abs(primedSpeed/ordinarySpeed-1.15)<.001);
+  assert.ok(Math.abs(primedAngle/ordinaryAngle-.7)<.001);
+  assert.equal(p.hotlineCharges,2,'one charge is consumed per trigger, not per pellet');
+  p.ammo=0;room.clock=4;
+  assert.equal(reload(room,p),true);
+  assert.ok(Math.abs(p.reloadDuration-weapons.scatter.reload*1.2)<.001);
+  assert.ok(Math.abs(p.reloadWindowStart-room.clock-p.reloadDuration*.55)<.001);
+  assert.ok(Math.abs(p.reloadWindowEnd-room.clock-p.reloadDuration*.75)<.001);
+});
+
 test('expired reconnect reservations release their squad slots', () => {
   const p={id:'p',name:'OFFLINE',disconnected:true,reconnectUntil:60};
   const room={code:'FAKE',clock:59,players:new Map([['p',p]]),feed:[]};

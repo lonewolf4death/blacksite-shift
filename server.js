@@ -265,12 +265,12 @@ function createPlayer(ws, name, room, requestedClass) {
   const weapon = classes[classId].weapon;
   const p = { id, ws, room, name: safeName(name), x: 12.5 + Math.cos(angle)*1.6, y: 12.5 + Math.sin(angle)*1.6,
     a: angle, hp: 100, maxHp: 100, dead: false, classId, weapon, ammo: weapons[weapon].mag,
-    reloadEnd: 0, reloadWindowStart:0, reloadWindowEnd:0, reloadAttempted:false, reloadBoostSlot:-1,
+    reloadEnd: 0, reloadStartedAt:0, reloadDuration:0, reloadWindowStart:0, reloadWindowEnd:0, reloadAttempted:false, reloadBoostSlot:-1,
     lastShot: -100, lastMove: 0, lastPing:-100, kills: 0, damageDealt: 0, damageHistory: [], shots: 0, hits: 0,
     upgrades: {}, talents:{}, grafts:[], choices: [], weaponChoices:[], graftChoices:[], ready: false, augmentReady:false, armoryReady:true, talentReady:true,graftReady:true,graftToken:0,
     overtimeVote:null,augmentPicksRemaining:1,draftToken:0,rerolls:0,
     loadout:[weapon,null], slot:0, slotAmmo:[weapons[weapon].mag,0], damage: 1, fireRate: 1, speed: 1, armor: 0, crit: 0,
-    slotHeat:[0,0],slotVentUntil:[0,0],controlCharges:0,
+    slotHeat:[0,0],slotVentUntil:[0,0],controlCharges:0,hotlineCharges:0,
     leech: 0, mag: 1, hurtAt: -100, invulnerableUntil: 0, lastDash: -100, dashUntil: 0,
     downed:false, downedUntil:0, reviveProgress:0, reviveTargetId:null, reviveIntentAt:-100, selfRevives:0,
     reconnectToken:crypto.randomBytes(24).toString('hex'),disconnected:false,reconnectUntil:0,
@@ -294,6 +294,7 @@ function publicPlayer(p) {
     ready: p.ready, augmentReady:p.augmentReady,armoryReady:p.armoryReady,talentReady:p.talentReady,graftReady:p.graftReady,graftToken:p.graftToken,
     overtimeVote:p.overtimeVote,augmentPicksRemaining:p.augmentPicksRemaining,draftToken:p.draftToken,rerolls:p.rerolls||0,
     reloading: p.reloadEnd > 0,
+    reloadProgress:p.reloadEnd>0&&p.reloadDuration>0?clamp((p.room.clock-p.reloadStartedAt)/p.reloadDuration,0,1):0,
     reloadWindowIn:p.reloadEnd>0?Math.max(0,p.reloadWindowStart-p.room.clock):0,
     reloadWindowLeft:p.reloadEnd>0?Math.max(0,p.reloadWindowEnd-p.room.clock):0,
     reloadAttempted:!!p.reloadAttempted,
@@ -301,7 +302,7 @@ function publicPlayer(p) {
     skillCooldown: Math.max(0,p.skillReadyAt-p.room.clock), skillActive: p.room.clock < p.skillUntil,
     arcCharges:p.arcCharges,phaseCharges:p.phaseCharges,reclaimerCooldown:Math.max(0,p.reclaimerReadyAt-p.room.clock),
     heat:p.weapon==='borer'?Math.round(p.slotHeat?.[p.slot]||0):0,
-    ventRemaining:p.weapon==='borer'?Math.max(0,(p.slotVentUntil?.[p.slot]||0)-p.room.clock):0,controlCharges:p.controlCharges||0,
+    ventRemaining:p.weapon==='borer'?Math.max(0,(p.slotVentUntil?.[p.slot]||0)-p.room.clock):0,controlCharges:p.controlCharges||0,hotlineCharges:p.hotlineCharges||0,
     slowed:p.room.clock<(p.slowUntil||0) };
 }
 function send(ws, data) { if (ws && !ws.closed) ws.send(JSON.stringify(data)); }
@@ -453,7 +454,7 @@ function snapshot(room) {
   for (const p of room.players.values()) send(p.ws, data);
 }
 function dealAugments(room,p,exclude=[]){
-  const eligible=upgrades.filter(u=>(!u.classId||u.classId===p.classId)&&
+  const eligible=upgrades.filter(u=>(!u.classId||u.classId===p.classId)&&(!u.unique||!p.upgrades?.[u.id])&&
     (!u.requiresWeapon||p.loadout?.includes(u.requiresWeapon))&&
     (!u.requiresBounce||p.upgrades?.ricochet||p.loadout?.some(id=>weapons[id]?.bounces)));
   const available=eligible.filter(u=>!exclude.includes(u.id));
@@ -524,7 +525,7 @@ export function startWave(room) {
     p.ready = false; p.choices = [];p.weaponChoices=[];p.graftChoices=[];p.overtimeVote=null;
     p.encounterWave=room.wave;
     p.encounterMetrics=newEncounterMetrics();
-    p.slotHeat=[0,0];p.slotVentUntil=[0,0];p.controlCharges=0;
+    p.slotHeat=[0,0];p.slotVentUntil=[0,0];p.controlCharges=0;p.hotlineCharges=0;
     if (room.wave === 1) { p.hp = p.maxHp; p.dead = false; p.kills = 0; }
     else if (p.dead||p.downed) { p.dead = false; p.hp = Math.ceil(p.maxHp * .4); }
     else p.hp = Math.min(p.maxHp, p.hp + 12);
@@ -551,9 +552,9 @@ function beginRun(room) {
     p.hp = 100; p.maxHp = 100; p.dead = false; p.downed=false;p.downedUntil=0;p.reviveProgress=0;p.reviveTargetId=null;p.reviveIntentAt=-100;p.selfRevives=0;
     p.weapon = classes[p.classId].weapon; p.ammo = weapons[p.weapon].mag;
     p.loadout=[p.weapon,null];p.slot=0;p.slotAmmo=[p.ammo,0];p.talents={};p.upgrades = {};p.grafts=[];p.graftChoices=[];p.graftReady=true;p.graftToken=0;p.arcCharges=0;p.phaseCharges=0;p.reclaimerReadyAt=0;p.damage = 1; p.fireRate = 1;
-    p.slotHeat=[0,0];p.slotVentUntil=[0,0];p.controlCharges=0;
+    p.slotHeat=[0,0];p.slotVentUntil=[0,0];p.controlCharges=0;p.hotlineCharges=0;
     p.speed = 1; p.armor = 0; p.crit = 0; p.leech = 0; p.mag = 1;
-    p.reloadEnd = 0;p.reloadWindowStart=0;p.reloadWindowEnd=0;p.reloadAttempted=false;p.reloadBoostSlot=-1;
+    p.reloadEnd = 0;p.reloadStartedAt=0;p.reloadDuration=0;p.reloadWindowStart=0;p.reloadWindowEnd=0;p.reloadAttempted=false;p.reloadBoostSlot=-1;
     p.lastShot = -100; p.skillReadyAt = 0; p.skillUntil = 0;p.tauntUntil=0;p.wardUntil=0;p.momentumUntil=0;p.momentumStacks=0;
     p.kills = 0; p.damageDealt = 0; p.damageHistory = []; p.shots = 0; p.hits = 0;
     p.overtimeVote=null;p.augmentPicksRemaining=1;p.draftToken=0;p.rerolls=0;p.lastPing=-100;
@@ -880,7 +881,7 @@ export function buildEncounterReport(room){
   return report;
 }
 function spawnPlayerProjectile(room,p,w,angle,pitch,shot){
-  const speed=w.speed*(1+.18*(p.upgrades.velocity||0)),horizontal=Math.cos(pitch)*speed;
+  const speed=w.speed*(1+.18*(p.upgrades.velocity||0))*(shot.hotlineCharged?1.15:1),horizontal=Math.cos(pitch)*speed;
   const talentDamage=(p.talents?.v_rounds&&['carbine','rail'].includes(p.weapon)?1.2:1)*(p.talents?.m_focus&&['pulse','arcgun'].includes(p.weapon)?1.2:1);
   const b={id:room.seq++,side:'player',kind:p.weapon,ownerId:p.id,shot,
     x:p.x,y:p.y,h:shot.originHeight,vx:Math.cos(angle)*horizontal,vy:Math.sin(angle)*horizontal,vh:Math.sin(pitch)*speed,
@@ -904,10 +905,11 @@ export function fire(room, p, aim, verticalAim = 0, height = 1.58) {
   const pitch = clamp(Number(verticalAim) || 0, -1.3, 1.3);
   const requested=Number(aim),baseAngle=clamp(Number.isFinite(requested)?requested:p.a,p.a-.22,p.a+.22);
   const shot={hit:false,originHeight:clamp(Number(height)||1.58,.9,2.85),arcCharged:p.arcCharges>0,phaseCharged:p.phaseCharges>0,graftProc:false,
-    boosted:p.reloadBoostSlot>=0&&p.reloadBoostSlot===p.slot,controlCharged:p.controlCharges>0,heatHigh:false};
+    boosted:p.reloadBoostSlot>=0&&p.reloadBoostSlot===p.slot,controlCharged:p.controlCharges>0,hotlineCharged:p.hotlineCharges>0,heatHigh:false};
   if(shot.arcCharged)p.arcCharges--;
   if(shot.phaseCharged)p.phaseCharges--;
   if(shot.controlCharged)p.controlCharges--;
+  if(shot.hotlineCharged)p.hotlineCharges--;
   if(p.weapon==='borer'){
     p.slotHeat||=[0,0];p.slotVentUntil||=[0,0];
     p.slotHeat[p.slot]=Math.min(100,(p.slotHeat[p.slot]||0)+12);
@@ -916,8 +918,9 @@ export function fire(room, p, aim, verticalAim = 0, height = 1.58) {
   }
   if(shot.boosted)p.reloadBoostSlot=-1;
   for (let i=0; i<count; i++) {
-    const angle=baseAngle+(count===1?0:(i-(count-1)/2)*w.spread+(roomRandom(room)-.5)*.018);
-    const pelletPitch=pitch+(pellets===1?0:(roomRandom(room)-.5)*.035);
+    const focus=shot.hotlineCharged?.7:1;
+    const angle=baseAngle+(count===1?0:((i-(count-1)/2)*w.spread+(roomRandom(room)-.5)*.018)*focus);
+    const pelletPitch=pitch+(pellets===1?0:(roomRandom(room)-.5)*.035*focus);
     const bolt=spawnPlayerProjectile(room,p,w,angle,pelletPitch,shot);
     if(p.weapon==='burst'&&i===Math.floor(count/2))bolt.crit=true;
   }
@@ -1122,7 +1125,9 @@ export function reload(room,p) {
   }
   const w = weapons[p.weapon], cap = Math.ceil(w.mag * p.mag);
   if (p.ammo >= cap) return false;
-  const duration=w.reload*Math.pow(.7,p.upgrades.quickhands||0);
+  const duration=w.reload*Math.pow(.7,p.upgrades.quickhands||0)*(p.upgrades.hotline?1.2:1);
+  p.reloadStartedAt=room.clock;
+  p.reloadDuration=duration;
   p.reloadEnd = room.clock + duration;
   p.reloadWindowStart=room.clock+duration*.55;
   p.reloadWindowEnd=room.clock+duration*.75;
@@ -1145,7 +1150,7 @@ export function useSkill(room,p) {
   if(p.classId==='runner'){
     p.skillUntil=room.clock+6+2*(p.talents?.r_duration||0);
     p.lastDash=-100;
-    p.reloadEnd=0;p.reloadWindowStart=0;p.reloadWindowEnd=0;p.reloadAttempted=false;
+    p.reloadEnd=0;p.reloadStartedAt=0;p.reloadDuration=0;p.reloadWindowStart=0;p.reloadWindowEnd=0;p.reloadAttempted=false;
     p.ammo=Math.ceil(weapons[p.weapon].mag*p.mag);p.slotAmmo[p.slot]=p.ammo;
   }
   if(p.classId==='breacher'){
@@ -1176,7 +1181,7 @@ export function useSkill(room,p) {
       }else{const before=q.hp;q.hp=Math.min(q.maxHp,q.hp+45+20*(p.upgrades.rallyPlus||0)+20*(p.talents?.m_heal||0));if(p.encounterMetrics)p.encounterMetrics.healing+=Math.round(q.hp-before);}
       q.wardUntil=room.clock+3;q.wardStrength=p.talents?.m_barrier?.75:.85;
       if(p.upgrades.rallyPlus&&q.reloadEnd>0){
-        q.reloadEnd=0;q.reloadWindowStart=0;q.reloadWindowEnd=0;q.reloadAttempted=false;
+        q.reloadEnd=0;q.reloadStartedAt=0;q.reloadDuration=0;q.reloadWindowStart=0;q.reloadWindowEnd=0;q.reloadAttempted=false;
         q.ammo=Math.ceil(weapons[q.weapon].mag*q.mag);q.slotAmmo[q.slot]=q.ammo;
         send(q.ws,{type:'rally_reload'});
       }
@@ -1198,6 +1203,7 @@ export function useSkill(room,p) {
 export function activateDash(room,p){
   if(room.phase!=='combat'||p.dead||p.downed||room.clock-p.lastDash<2.7||room.docket?.holderId===p.id)return false;
   p.lastDash=room.clock;p.dashUntil=room.clock+.25;
+  if(p.upgrades?.hotline)p.hotlineCharges=3;
   if(p.grafts?.includes('phaseCoupler'))p.phaseCharges=3;
   if(p.grafts?.includes('kineticRig')){
     const entries=new Map();
@@ -1259,7 +1265,7 @@ export function applyGraft(p,id,token){
 function switchWeapon(p,slot){
   if(!Number.isInteger(slot)||slot<0||slot>1||slot===p.slot||!p.loadout[slot])return;
   p.slotAmmo[p.slot]=p.ammo;p.slot=slot;p.weapon=p.loadout[slot];p.ammo=p.slotAmmo[slot];
-  p.reloadEnd=0;p.reloadAttempted=false;p.reloadWindowStart=0;p.reloadWindowEnd=0;p.lastShot=-100;
+  p.reloadEnd=0;p.reloadStartedAt=0;p.reloadDuration=0;p.reloadAttempted=false;p.reloadWindowStart=0;p.reloadWindowEnd=0;p.lastShot=-100;
 }
 function handleMessage(ws, raw) {
   let msg; try { msg = JSON.parse(raw); } catch { return; }
@@ -1546,7 +1552,7 @@ export function updateRoom(room,dt) {
     }
     for (const p of room.players.values()) if (p.reloadEnd>0 && room.clock>=p.reloadEnd) {
       p.ammo=Math.ceil(weapons[p.weapon].mag*p.mag);p.slotAmmo[p.slot]=p.ammo;p.reloadEnd=0;
-      p.reloadWindowStart=0;p.reloadWindowEnd=0;p.reloadAttempted=false;
+      p.reloadStartedAt=0;p.reloadDuration=0;p.reloadWindowStart=0;p.reloadWindowEnd=0;p.reloadAttempted=false;
     }
     updateRevives(room,dt);
     if ([...room.players.values()].every(p=>p.dead)) {

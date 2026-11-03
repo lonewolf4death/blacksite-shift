@@ -126,6 +126,14 @@ Ask players to identify a gun by sound and receiver motion; choose a burst lengt
 
 ## Current state and prioritized work
 
+### November 2 implementation note
+
+The near-reticle precision indicator now uses a restrained progress rail driven by the server's reload start time and duration. Its amber section is the actual 55–75% success interval. A single second press in that interval completes the reload early and primes the existing 20% charged round; a missed press leaves the ordinary reload intact. Enemy and machine danger messages suppress the rail, so the more urgent warning keeps priority. A quiet receiver click marks completion, including an ordinary reload. Reserve ammunition remains unlimited.
+
+**Hotline Feed** adapts the proposed dash-to-fire tradeoff into a rare, one-installation augment rather than a dropped weapon variant. Each dash refreshes three trigger pulls; those projectiles travel 15% faster and have 30% less horizontal and vertical spread. Every reload takes 20% longer while installed. The charge count is server-owned, visible in the weapon HUD, reset between encounters, and consumed once per trigger even when that trigger launches multiple pellets or bonus projectiles. The choice encourages a dash to a new firing angle followed by a deliberate volley, without making an unaugmented starter gun dependent on precision reload or weapon rarity.
+
+The earlier table below records the study's state at the time it was written. Thermal Borer and this cue have since shipped; Counterweight and Survey Bore remain proposals. The next playtest should compare the same starter gun with and without Hotline Feed, then check that the warning suppression and 20% reload cost remain legible under four-player fire.
+
 | Priority | Action | Acceptance |
 | --- | --- | --- |
 | Implemented in this pass | Near-reticle precision-reload cue with approach, window and missed-attempt states. | It mirrors server state and does not hide enemy warnings or alter ammo rules. |
